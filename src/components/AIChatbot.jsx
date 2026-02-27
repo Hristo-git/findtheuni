@@ -4,35 +4,93 @@ import { universities, fieldEmoji } from '../data/universities';
 
 const tuitionStr = u => u.tuition[0] === 0 && u.tuition[1] === 0 ? '🎉 Безплатно' : `€${u.tuition[0]}–${u.tuition[1]}/год`;
 
+// Trigram similarity for fuzzy matching Bulgarian text (handles typos)
+function trigramSim(a, b) {
+  const tgs = s => {
+    const set = new Set();
+    for (let i = 0; i <= s.length - 3; i++) set.add(s.slice(i, i + 3));
+    return set;
+  };
+  const ta = tgs(a), tb = tgs(b);
+  let common = 0;
+  ta.forEach(t => { if (tb.has(t)) common++; });
+  return (ta.size + tb.size) === 0 ? 0 : (2 * common) / (ta.size + tb.size);
+}
+
+function fuzzyFieldMatch(text) {
+  // Exact match first
+  const exact = Object.keys(fieldEmoji).find(f => text.includes(f.toLowerCase()));
+  if (exact) return exact;
+  // Fuzzy: check each word against each field name (handles typos like "архотектура")
+  const words = text.split(/[\s,]+/).filter(w => w.length >= 4);
+  let bestField = null, bestScore = 0.45; // minimum similarity threshold
+  for (const word of words) {
+    for (const f of Object.keys(fieldEmoji)) {
+      const sim = trigramSim(word, f.toLowerCase());
+      if (sim > bestScore) { bestScore = sim; bestField = f; }
+    }
+  }
+  return bestField;
+}
+
 function getReply(msg, history = []) {
   const lower = msg.toLowerCase();
   const lastAiMsg = [...history].reverse().find(m => m.from === 'ai')?.text || '';
 
-  // Price/cost follow-up — use context from previous message
+  // Only use context if last AI message contains real university data (not welcome/generic messages)
+  const hasRealContext = lastAiMsg.includes('€') || lastAiMsg.includes('#') || lastAiMsg.includes('/мес');
+  const contextUnis = hasRealContext
+    ? universities.filter(u => lastAiMsg.includes(u.nameEn) || lastAiMsg.includes(u.name))
+    : [];
+  const contextField = hasRealContext
+    ? Object.keys(fieldEmoji).find(f => lastAiMsg.includes(f))
+    : null;
+
+  // Intent detection
   const isPriceQ = ['цена', 'цени', 'такса', 'такси', 'колко струва', 'колко коства', 'колко са', 'цените'].some(w => lower.includes(w));
-  if (isPriceQ) {
-    // Find universities mentioned in last AI response
-    const contextUnis = universities.filter(u =>
-      lastAiMsg.includes(u.nameEn) || lastAiMsg.includes(u.name)
-    );
-    if (contextUnis.length > 0) {
-      const list = contextUnis.map(u =>
-        `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u)} · 🏙️ €${u.costOfLiving}/мес`
-      ).join('\n');
-      return `Цени за споменатите университети:\n\n${list}\n\n💡 Таксите са за EU граждани. За non-EU може да са 2–3x по-високи.`;
-    }
-    // Fall through to field/country context below
-    const contextField = Object.keys(fieldEmoji).find(f => lastAiMsg.toLowerCase().includes(f.toLowerCase()));
-    if (contextField) {
-      const unis = universities.filter(u => u.fields.includes(contextField)).sort((a, b) => a.rank - b.rank);
-      const list = unis.slice(0, 10).map(u =>
-        `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u)}`
-      ).join('\n');
-      return `Цени за **${contextField}** университети:\n\n${list}`;
-    }
+  const isCostQ = ['издръжка', 'издръжката', 'разходи', 'живот', 'наем', 'скъпо', 'евтино', 'стойността'].some(w => lower.includes(w));
+  const isShowMore = ['дай ми', 'покажи', 'повече', 'конкретно', 'поне', 'още', 'пълен', 'всички', 'списък'].some(w => lower.includes(w));
+
+  // Context-based replies (only when previous answer had real data)
+  if (isCostQ && contextUnis.length > 0) {
+    const list = contextUnis.map(u =>
+      `${u.emoji} **${u.nameEn}** (${u.city}) — 🏙️ €${u.costOfLiving}/мес · 💰 ${tuitionStr(u)}`
+    ).join('\n');
+    return `Разходи за живот (споменати университети):\n\n${list}\n\n💡 Включва наем, храна и транспорт.`;
   }
 
-  // Check keyword patterns
+  if (isCostQ && contextField) {
+    const unis = universities.filter(u => u.fields.includes(contextField)).sort((a, b) => a.costOfLiving - b.costOfLiving);
+    const list = unis.slice(0, 8).map(u =>
+      `${u.emoji} **${u.nameEn}** (${u.city}) — 🏙️ €${u.costOfLiving}/мес`
+    ).join('\n');
+    return `Разходи за живот при **${contextField}** (най-евтини първи):\n\n${list}`;
+  }
+
+  if (isPriceQ && contextUnis.length > 0) {
+    const list = contextUnis.map(u =>
+      `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u)} · 🏙️ €${u.costOfLiving}/мес`
+    ).join('\n');
+    return `Цени за споменатите университети:\n\n${list}\n\n💡 Таксите са за EU граждани. За non-EU може да са 2–3x по-високи.`;
+  }
+
+  if (isPriceQ && contextField) {
+    const unis = universities.filter(u => u.fields.includes(contextField)).sort((a, b) => a.rank - b.rank);
+    const list = unis.slice(0, 10).map(u =>
+      `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u)} · 🏙️ €${u.costOfLiving}/мес`
+    ).join('\n');
+    return `Цени за **${contextField}** университети:\n\n${list}\n\n💡 Таксите са за EU граждани.`;
+  }
+
+  if (isShowMore && contextField) {
+    const unis = universities.filter(u => u.fields.includes(contextField)).sort((a, b) => a.rank - b.rank);
+    const list = unis.map(u =>
+      `${u.emoji} **${u.nameEn}** (${u.city}, ${u.country}) — #${u.rank} | ${tuitionStr(u)}`
+    ).join('\n');
+    return `Всички университети за **${contextField}** (${unis.length}):\n\n${list}`;
+  }
+
+  // Keyword patterns
   for (const p of chatPatterns) {
     if (p.patterns.some(pat => lower.includes(pat.toLowerCase()))) return p.answer;
   }
@@ -53,8 +111,8 @@ function getReply(msg, history = []) {
     return `Университети в **${country}** (${unis.length}):\n${unis.slice(0, 6).map(u => `${u.emoji} **${u.nameEn}** — #${u.rank} | ${tuitionStr(u)}`).join('\n')}${unis.length > 6 ? `\n...и още ${unis.length - 6}. Виж всички в браузъра!` : ''}`;
   }
 
-  // Field
-  const fieldMatch = Object.keys(fieldEmoji).find(f => lower.includes(f.toLowerCase()));
+  // Field — with fuzzy matching to handle typos (e.g. "архотектура" → "Архитектура")
+  const fieldMatch = fuzzyFieldMatch(lower);
   if (fieldMatch) {
     const unis = universities.filter(u => u.fields.includes(fieldMatch)).sort((a, b) => a.rank - b.rank);
     return `Топ университети за **${fieldMatch}** (${unis.length} общо):\n${unis.slice(0, 6).map(u => `${u.emoji} **${u.nameEn}** (${u.city}) — #${u.rank} | ${tuitionStr(u)}`).join('\n')}\n\nПитай "цените в тези университети" за пълния списък с такси.`;
