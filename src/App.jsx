@@ -131,18 +131,6 @@ export default function App() {
             </Card>)}
           </div>
 
-          {/* Pricing */}
-          <div style={{ textAlign: "center", marginBottom: 8 }}><h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 24, fontWeight: 600 }}>Ценови планове</h2></div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-            {[{ n: "Basic", p: "49", ft: ["RIASEC тест", "5 препоръки", "Базова информация"], pop: false }, { n: "Standard", p: "99", ft: ["Всичко от Basic", "15 препоръки", "AI Съветник", "Стипендии", "Сравнение"], pop: true }, { n: "Premium", p: "149", ft: ["Неограничени", "1:1 менторство", "Помощ кандидатстване", "Lifetime"], pop: false }].map((pl, i) => <Card key={i} style={{ border: pl.pop ? "2px solid #2563EB" : undefined, position: "relative" }}>
-              {pl.pop && <div style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: "#2563EB", color: "white", padding: "2px 10px", borderRadius: 12, fontSize: 10, fontWeight: 600 }}>Популярен</div>}
-              <div style={{ fontSize: 14, fontWeight: 600 }}>{pl.n}</div>
-              <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 30, fontWeight: 700 }}>{pl.p}<span style={{ fontSize: 14, fontWeight: 400 }}> лв</span></div>
-              <div style={{ fontSize: 11, color: "#A8A29E", marginBottom: 12 }}>еднократно</div>
-              {pl.ft.map((f, j) => <div key={j} style={{ padding: "4px 0", fontSize: 12, color: "#78716C" }}>✓ {f}</div>)}
-              <Btn accent={pl.pop} style={{ width: "100%", justifyContent: "center", marginTop: 12 }} sm>Избери</Btn>
-            </Card>)}
-          </div>
         </div>}
 
         {/* ═══ TEST ═══ */}
