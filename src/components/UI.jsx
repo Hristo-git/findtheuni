@@ -1,17 +1,21 @@
 import React from 'react';
 
-export function Btn({ children, onClick, variant = 'primary', size = 'md', disabled, style, type = 'button' }) {
+export function Btn({ children, onClick, variant = 'primary', size = 'md', disabled, style, type = 'button',
+  primary, accent, sm, lg }) {
+  const resolvedVariant = primary ? 'primary' : accent ? 'accent' : variant;
+  const resolvedSize = sm ? 'sm' : lg ? 'lg' : size;
   const base = {
     display: 'inline-flex', alignItems: 'center', gap: '6px',
     border: 'none', borderRadius: '8px', fontWeight: '600',
     cursor: disabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.15s', fontFamily: 'inherit',
     opacity: disabled ? 0.5 : 1,
-    fontSize: size === 'sm' ? '0.85rem' : size === 'lg' ? '1.05rem' : '0.95rem',
-    padding: size === 'sm' ? '6px 14px' : size === 'lg' ? '14px 28px' : '10px 20px',
+    fontSize: resolvedSize === 'sm' ? '0.85rem' : resolvedSize === 'lg' ? '1.05rem' : '0.95rem',
+    padding: resolvedSize === 'sm' ? '6px 14px' : resolvedSize === 'lg' ? '14px 28px' : '10px 20px',
   };
   const variants = {
     primary: { background: '#2563eb', color: '#fff' },
+    accent: { background: '#7c3aed', color: '#fff' },
     secondary: { background: '#f1f5f9', color: '#334155' },
     ghost: { background: 'transparent', color: '#2563eb', border: '1.5px solid #2563eb' },
     danger: { background: '#ef4444', color: '#fff' },
@@ -19,7 +23,7 @@ export function Btn({ children, onClick, variant = 'primary', size = 'md', disab
   };
   return (
     <button type={type} onClick={onClick} disabled={disabled}
-      style={{ ...base, ...variants[variant], ...style }}
+      style={{ ...base, ...(variants[resolvedVariant] || variants.primary), ...style }}
       onMouseEnter={e => { if (!disabled) e.currentTarget.style.filter = 'brightness(0.92)'; }}
       onMouseLeave={e => { e.currentTarget.style.filter = ''; }}>
       {children}
@@ -58,7 +62,9 @@ export function AnimBar({ value, max = 100, color = '#2563eb', label }) {
   );
 }
 
-export function RadarChart({ scores, size = 200 }) {
+export function RadarChart({ scores: scoresProp, data, size = 200 }) {
+  // Accept either scores={R:5,I:3,...} or data=[{label:'R',value:5},...]
+  const scores = scoresProp || (data ? Object.fromEntries(data.map(d => [d.label, d.value])) : {});
   const types = ['R', 'I', 'A', 'S', 'E', 'C'];
   const colors = { R: '#ef4444', I: '#3b82f6', A: '#a855f7', S: '#22c55e', E: '#f59e0b', C: '#14b8a6' };
   const labels = { R: 'Реалист', I: 'Изследовател', A: 'Артист', S: 'Социален', E: 'Предприемач', C: 'Конвенционален' };
@@ -66,7 +72,7 @@ export function RadarChart({ scores, size = 200 }) {
   const n = types.length;
 
   const angleOf = i => (Math.PI * 2 * i) / n - Math.PI / 2;
-  const maxScore = 15;
+  const maxScore = Math.max(...types.map(t => scores[t] || 0), 1);
 
   const gridLevels = [0.25, 0.5, 0.75, 1];
   const toXY = (i, ratio) => ({
