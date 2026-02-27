@@ -2,38 +2,65 @@ import React, { useState, useRef, useEffect } from 'react';
 import { chatPatterns } from '../data/chatData';
 import { universities, fieldEmoji } from '../data/universities';
 
-function getReply(msg) {
+const tuitionStr = u => u.tuition[0] === 0 && u.tuition[1] === 0 ? '🎉 Безплатно' : `€${u.tuition[0]}–${u.tuition[1]}/год`;
+
+function getReply(msg, history = []) {
   const lower = msg.toLowerCase();
-  
-  // Check patterns
-  for (const p of chatPatterns) {
-    if (p.patterns.some(pat => lower.includes(pat))) return p.answer;
+  const lastAiMsg = [...history].reverse().find(m => m.from === 'ai')?.text || '';
+
+  // Price/cost follow-up — use context from previous message
+  const isPriceQ = ['цена', 'цени', 'такса', 'такси', 'колко струва', 'колко коства', 'колко са', 'цените'].some(w => lower.includes(w));
+  if (isPriceQ) {
+    // Find universities mentioned in last AI response
+    const contextUnis = universities.filter(u =>
+      lastAiMsg.includes(u.nameEn) || lastAiMsg.includes(u.name)
+    );
+    if (contextUnis.length > 0) {
+      const list = contextUnis.map(u =>
+        `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u)} · 🏙️ €${u.costOfLiving}/мес`
+      ).join('\n');
+      return `Цени за споменатите университети:\n\n${list}\n\n💡 Таксите са за EU граждани. За non-EU може да са 2–3x по-високи.`;
+    }
+    // Fall through to field/country context below
+    const contextField = Object.keys(fieldEmoji).find(f => lastAiMsg.toLowerCase().includes(f.toLowerCase()));
+    if (contextField) {
+      const unis = universities.filter(u => u.fields.includes(contextField)).sort((a, b) => a.rank - b.rank);
+      const list = unis.slice(0, 10).map(u =>
+        `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u)}`
+      ).join('\n');
+      return `Цени за **${contextField}** университети:\n\n${list}`;
+    }
   }
-  
-  // Check for specific university name
-  const uni = universities.find(u => 
+
+  // Check keyword patterns
+  for (const p of chatPatterns) {
+    if (p.patterns.some(pat => lower.includes(pat.toLowerCase()))) return p.answer;
+  }
+
+  // Specific university name
+  const uni = universities.find(u =>
     lower.includes(u.name.toLowerCase()) || lower.includes(u.nameEn.toLowerCase())
   );
   if (uni) {
-    return `**${uni.name}** (${uni.nameEn})\n📍 ${uni.city}, ${uni.country} · 🏆 #${uni.rank}\n⭐ ${uni.rating}/5 · 💰 ${uni.tuition[0] === 0 && uni.tuition[1] === 0 ? 'Безплатно!' : `€${uni.tuition[0]}–${uni.tuition[1]}`}\n👔 ${uni.employability}% заетост · 👥 ${uni.students.toLocaleString()} студенти\n📚 Програми: ${uni.programs.join(', ')}\n💡 ${uni.type === 'public' ? 'Държавен' : 'Частен'} · 🌐 ${uni.languages.join(', ')}`;
+    return `**${uni.name}** (${uni.nameEn})\n📍 ${uni.city}, ${uni.country} · 🏆 #${uni.rank}\n⭐ ${uni.rating}/5 · 💰 ${tuitionStr(uni)}\n🏙️ Живот: ~€${uni.costOfLiving}/мес · 👔 ${uni.employability}% заетост\n👥 ${uni.students.toLocaleString()} студенти · 📅 от ${uni.founded}\n📚 ${uni.programs.join(', ')}\n🌐 ${uni.languages.join(', ')} · ${uni.type === 'public' ? '🏛️ Държавен' : '🏢 Частен'}`;
   }
-  
-  // Check for country
+
+  // Country
   const countryMatch = universities.filter(u => lower.includes(u.country.toLowerCase()));
   if (countryMatch.length > 0) {
     const country = countryMatch[0].country;
     const unis = universities.filter(u => u.country === country).sort((a, b) => a.rank - b.rank);
-    return `Университети в **${country}** (${unis.length}):\n${unis.slice(0, 5).map(u => `${u.emoji} **${u.nameEn}** — #${u.rank}, ⭐${u.rating}`).join('\n')}\n${unis.length > 5 ? `\n...и още ${unis.length - 5}. Виж всички в браузъра!` : ''}`;
+    return `Университети в **${country}** (${unis.length}):\n${unis.slice(0, 6).map(u => `${u.emoji} **${u.nameEn}** — #${u.rank} | ${tuitionStr(u)}`).join('\n')}${unis.length > 6 ? `\n...и още ${unis.length - 6}. Виж всички в браузъра!` : ''}`;
   }
-  
-  // Check for field
+
+  // Field
   const fieldMatch = Object.keys(fieldEmoji).find(f => lower.includes(f.toLowerCase()));
   if (fieldMatch) {
     const unis = universities.filter(u => u.fields.includes(fieldMatch)).sort((a, b) => a.rank - b.rank);
-    return `Топ университети за **${fieldMatch}**:\n${unis.slice(0, 5).map(u => `${u.emoji} **${u.nameEn}** (${u.city}) — #${u.rank}`).join('\n')}\n\nОбщо ${unis.length} университета предлагат ${fieldMatch}.`;
+    return `Топ университети за **${fieldMatch}** (${unis.length} общо):\n${unis.slice(0, 6).map(u => `${u.emoji} **${u.nameEn}** (${u.city}) — #${u.rank} | ${tuitionStr(u)}`).join('\n')}\n\nПитай "цените в тези университети" за пълния списък с такси.`;
   }
-  
-  return "Благодаря за въпроса! Мога да ти помогна с:\n🎓 Университети (напр. \"Oxford\", \"ТУ София\")\n🌍 Държави (напр. \"Германия\", \"UK\")\n📚 Области (напр. \"IT\", \"Медицина\", \"Бизнес\")\n💰 Стипендии и разходи\n🧠 RIASEC теста\n\nПросто попитай!";
+
+  return "Мога да помогна с:\n🎓 Университет — напр. \"Oxford\", \"ETH Zurich\"\n🌍 Държава — напр. \"Германия\", \"Нидерландия\"\n📚 Специалност — напр. \"IT\", \"Медицина\", \"Архитектура\"\n💰 \"Цените в тези университети\" след предишен отговор\n🎯 Стипендии, разходи, RIASEC тест";
 }
 
 function formatMsg(text) {
@@ -55,17 +82,20 @@ export default function AIChatbot({ isOpen, onClose }) {
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
   useEffect(() => { if (isOpen) inputRef.current?.focus(); }, [isOpen]);
 
-  const send = () => {
-    if (!input.trim()) return;
-    const userMsg = input.trim();
+  const send = (overrideMsg) => {
+    const userMsg = (overrideMsg || input).trim();
+    if (!userMsg) return;
     setInput('');
-    setMsgs(prev => [...prev, { from: 'user', text: userMsg }]);
-    setTyping(true);
-    setTimeout(() => {
-      const reply = getReply(userMsg);
-      setMsgs(prev => [...prev, { from: 'ai', text: reply }]);
-      setTyping(false);
-    }, 600 + Math.random() * 400);
+    setMsgs(prev => {
+      const next = [...prev, { from: 'user', text: userMsg }];
+      setTyping(true);
+      setTimeout(() => {
+        const reply = getReply(userMsg, next);
+        setMsgs(p => [...p, { from: 'ai', text: reply }]);
+        setTyping(false);
+      }, 600 + Math.random() * 400);
+      return next;
+    });
   };
 
   if (!isOpen) return null;
@@ -109,7 +139,7 @@ export default function AIChatbot({ isOpen, onClose }) {
       {/* Quick actions */}
       <div style={{ padding: '6px 14px', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {['💰 Безплатно', '💻 IT', '🏥 Медицина', '🎓 Стипендии'].map(q => (
-          <button key={q} onClick={() => { setInput(q.slice(2).trim()); setTimeout(() => { setInput(q.slice(2).trim()); send(); }, 50); }} style={{ padding: '3px 8px', borderRadius: 8, fontSize: 10, border: '1px solid #E7E5E4', background: '#FAFAF9', color: '#78716C' }}>{q}</button>
+          <button key={q} onClick={() => send(q.slice(2).trim())} style={{ padding: '3px 8px', borderRadius: 8, fontSize: 10, border: '1px solid #E7E5E4', background: '#FAFAF9', color: '#78716C' }}>{q}</button>
         ))}
       </div>
 
