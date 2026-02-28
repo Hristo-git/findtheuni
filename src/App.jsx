@@ -5,6 +5,8 @@ import { Btn, Card, RadarChart, AnimBar } from './components/UI';
 import AIChatbot from './components/AIChatbot';
 import EuropeMap from './components/EuropeMap';
 import ScholarshipFinder from './components/ScholarshipFinder';
+import CountryGuidesPage from './components/CountryGuides';
+import ApplicationTracker from './components/ApplicationTracker';
 
 const cls = ["#2563EB", "#7C3AED", "#059669", "#EA580C", "#E11D48", "#0891B2"];
 
@@ -91,7 +93,7 @@ export default function App() {
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
           <div onClick={() => nv("home")} style={{ fontFamily: "'Playfair Display',serif", fontSize: 19, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>📖 <span className="grad-text">Read More</span></div>
           <div style={{ display: "flex", gap: 2 }}>
-            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["scholarships", "🎯"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
+            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
               <button key={k} onClick={() => nv(k)} style={{ padding: "6px 10px", borderRadius: 8, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#2563EB" : "#78716C", background: pg === k ? "#EFF6FF" : "transparent", border: "none" }}>{icon}</button>
             )}
           </div>
@@ -103,7 +105,7 @@ export default function App() {
         {/* ═══ HOME ═══ */}
         {pg === "home" && <div className="page-enter">
           <div style={{ textAlign: "center", padding: "56px 0 40px" }}>
-            <div style={{ display: "inline-flex", padding: "4px 12px", background: "#EFF6FF", color: "#2563EB", borderRadius: 14, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>✨ v3 — AI чатбот + карта + стипендии + RIASEC тест</div>
+            <div style={{ display: "inline-flex", padding: "4px 12px", background: "#EFF6FF", color: "#2563EB", borderRadius: 14, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>✨ v4 — Country Guides + Destination Quiz + Application Tracker</div>
             <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: "clamp(28px,5vw,44px)", fontWeight: 700, lineHeight: 1.15, marginBottom: 12 }}>Открий <span className="grad-text">перфектния университет</span></h1>
             <p style={{ fontSize: 15, color: "#78716C", maxWidth: 480, margin: "0 auto 22px", lineHeight: 1.6 }}>70 университета от 20+ държави. RIASEC AI тест. Стипендии. Интерактивна карта. AI съветник.</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
@@ -112,7 +114,7 @@ export default function App() {
               <Btn accent onClick={() => setChat(true)}>🤖 AI Съветник</Btn>
             </div>
             <div style={{ display: "flex", justifyContent: "center", gap: 32, marginTop: 36, flexWrap: "wrap" }}>
-              {[["70", "Университета"], ["20+", "Държави"], ["15", "Стипендии"], ["🤖", "AI Чатбот"]].map(([n, l]) => <div key={l}><div style={{ fontFamily: "'Playfair Display',serif", fontSize: 26, fontWeight: 700 }}>{n}</div><div style={{ fontSize: 11, color: "#A8A29E" }}>{l}</div></div>)}
+              {[["70", "Университета"], ["15", "Държави гайдове"], ["15", "Стипендии"], ["📝", "Tracker"]].map(([n, l]) => <div key={l}><div style={{ fontFamily: "'Playfair Display',serif", fontSize: 26, fontWeight: 700 }}>{n}</div><div style={{ fontSize: 11, color: "#A8A29E" }}>{l}</div></div>)}
             </div>
           </div>
 
@@ -121,7 +123,9 @@ export default function App() {
               { i: "🤖", bg: "#EFF6FF", t: "AI Съветник", d: "Питай за университети, стипендии, програми на български.", click: () => setChat(true) },
               { i: "🧬", bg: "#F5F3FF", t: "RIASEC тест", d: "18 въпроса, Holland Code, radar chart, AI препоръки.", click: () => nv("test") },
               { i: "🗺️", bg: "#ECFDF5", t: "Карта на Европа", d: "Интерактивна карта с всички 70 университета.", click: () => nv("browse") },
+              { i: "🌍", bg: "#F0FDF9", t: "Гайдове по държави", d: "15 държави — виза, жилище, работа, култура. + Destination Quiz!", click: () => nv("guides") },
               { i: "🎯", bg: "#FFF7ED", t: "Стипендии", d: "15 стипендии — Erasmus+, DAAD, Chevening и други.", click: () => nv("scholarships") },
+              { i: "📝", bg: "#FFFBEB", t: "Application Tracker", d: "Следи кандидатури, дедлайни, документи. Календар.", click: () => nv("tracker") },
               { i: "📊", bg: "#FFF1F2", t: "Сравнение", d: "Side-by-side по 15 критерия. До 4 университета.", click: () => nv("compare") },
               { i: "📋", bg: "#ECFEFF", t: "Табло", d: "Radar chart, препоръки, любими — всичко на едно място.", click: () => nv("dash") },
             ].map((f, i) => <Card key={i} style={{ cursor: "pointer" }} onClick={f.click}>
@@ -283,6 +287,12 @@ export default function App() {
         {/* ═══ SCHOLARSHIPS ═══ */}
         {pg === "scholarships" && <div style={{ padding: "32px 0" }}><ScholarshipFinder /></div>}
 
+        {/* ═══ COUNTRY GUIDES ═══ */}
+        {pg === "guides" && <CountryGuidesPage onBrowseUni={(u) => { sL(u); nv("browse"); sTab("info"); }} />}
+
+        {/* ═══ APPLICATION TRACKER ═══ */}
+        {pg === "tracker" && <ApplicationTracker />}
+
         {/* ═══ COMPARE ═══ */}
         {pg === "compare" && <div style={{ padding: "32px 0" }} className="page-enter">
           <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 24, fontWeight: 600, marginBottom: 4 }}>Сравнение</h2>
@@ -356,7 +366,7 @@ export default function App() {
       <AIChatbot isOpen={chat} onClose={() => setChat(false)} />
 
       <div style={{ borderTop: "1px solid #E7E5E4", padding: "20px", textAlign: "center", color: "#A8A29E", fontSize: 10 }}>
-        📖 Read More v3 © 2026 · AI Чатбот + Карта + Стипендии + RIASEC
+        📖 Find The Uni v4 © 2026 · Country Guides + Tracker + AI + RIASEC
       </div>
     </div>
   );
