@@ -62,13 +62,15 @@ export function AnimBar({ value, max = 100, color = '#2563eb', label }) {
   );
 }
 
-export function RadarChart({ scores: scoresProp, data, size = 200 }) {
+export function RadarChart({ scores: scoresProp, data, size = 220 }) {
   // Accept either scores={R:5,I:3,...} or data=[{label:'R',value:5},...]
   const scores = scoresProp || (data ? Object.fromEntries(data.map(d => [d.label, d.value])) : {});
   const types = ['R', 'I', 'A', 'S', 'E', 'C'];
   const colors = { R: '#ef4444', I: '#3b82f6', A: '#a855f7', S: '#22c55e', E: '#f59e0b', C: '#14b8a6' };
   const labels = { R: 'Реалист', I: 'Изследовател', A: 'Артист', S: 'Социален', E: 'Предприемач', C: 'Конвенционален' };
-  const cx = size / 2, cy = size / 2, r = size * 0.38;
+  const pad = 60;
+  const cx = size / 2 + pad, cy = size / 2 + pad, r = size * 0.38;
+  const totalW = size + pad * 2, totalH = size + pad * 2;
   const n = types.length;
 
   const angleOf = i => (Math.PI * 2 * i) / n - Math.PI / 2;
@@ -84,7 +86,7 @@ export function RadarChart({ scores: scoresProp, data, size = 200 }) {
   const dataPath = dataPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <svg width={totalW} height={totalH} viewBox={`0 0 ${totalW} ${totalH}`} style={{ maxWidth: '100%' }}>
       {gridLevels.map(lvl => {
         const pts = types.map((_, i) => toXY(i, lvl));
         const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
@@ -96,13 +98,13 @@ export function RadarChart({ scores: scoresProp, data, size = 200 }) {
       })}
       <path d={dataPath} fill="rgba(37,99,235,0.18)" stroke="#2563eb" strokeWidth="2" />
       {types.map((t, i) => {
-        const lp = toXY(i, 1.22);
+        const lp = toXY(i, 1.28);
         const dp = toXY(i, (scores[t] || 0) / maxScore);
         return (
           <g key={t}>
             <circle cx={dp.x} cy={dp.y} r="4" fill={colors[t]} />
             <text x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle"
-              fontSize={size * 0.065} fontWeight="600" fill={colors[t]}>{labels[t]}</text>
+              fontSize={size * 0.07} fontWeight="600" fill={colors[t]}>{labels[t]}</text>
           </g>
         );
       })}
