@@ -1,0 +1,17 @@
+{
+  "name": "Find The Uni — Намери университет в Европа",
+  "short_name": "FindTheUni",
+  "description": "AI платформа за избор на университет в Европа. RIASEC тест, стипендии, карта, AI съветник.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAF9",
+  "theme_color": "#2563EB",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "categories": ["education"],
+  "lang": "bg",
+  "screenshots": []
+}

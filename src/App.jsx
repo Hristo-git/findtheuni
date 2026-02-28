@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { universities, allFields, allCountries, fieldEmoji } from './data/universities';
-import { questions, RIASEC_MAP, dimEmoji } from './data/testData';
+import { questions, RIASEC_MAP, dimEmoji, getArchetype, careerOutcomes } from './data/testData';
 import { Btn, Card, RadarChart, AnimBar } from './components/UI';
 import AIChatbot from './components/AIChatbot';
 import EuropeMap from './components/EuropeMap';
 import ScholarshipFinder from './components/ScholarshipFinder';
 import CountryGuidesPage from './components/CountryGuides';
 import ApplicationTracker from './components/ApplicationTracker';
+import StudentReviews from './components/StudentReviews';
+import PeerChat from './components/PeerChat';
 
 const cls = ["#2563EB", "#7C3AED", "#059669", "#EA580C", "#E11D48", "#0891B2"];
 
@@ -66,7 +68,9 @@ export default function App() {
 
   const nv = p => { sP(p); sL(null); sTab("info"); };
 
-  const UniRow = ({ u }) => (
+  const UniRow = ({ u }) => {
+    const matchedProgs = sr ? u.programs.filter(p => p.toLowerCase().includes(sr.toLowerCase())) : [];
+    return (
     <Card style={{ padding: "14px 16px", marginBottom: 8, cursor: "pointer", display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 12, alignItems: "center" }}
       onClick={() => { sL(u); if (pg !== "browse") nv("browse"); sTab("info"); }}>
       <div style={{ width: 42, height: 42, borderRadius: 11, background: "#F5F5F4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{u.emoji}</div>
@@ -77,6 +81,10 @@ export default function App() {
           <span>💰{u.tuition[0] === 0 && u.tuition[1] === 0 ? "Безпл." : `€${u.tuition[0]}–${u.tuition[1]}`}</span>
           {u.employability && <span>👔{u.employability}%</span>}
         </div>
+        {matchedProgs.length > 0 && <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginTop: 4 }}>
+          {matchedProgs.slice(0, 3).map((p, i) => <span key={i} style={{ padding: "1px 7px", borderRadius: 6, fontSize: 9, background: "#ECFDF5", color: "#059669", fontWeight: 500 }}>🎓 {p}</span>)}
+          {matchedProgs.length > 3 && <span style={{ fontSize: 9, color: "#A8A29E" }}>+{matchedProgs.length - 3}</span>}
+        </div>}
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: "#EA580C" }}>⭐{u.rating}</span>
@@ -84,7 +92,7 @@ export default function App() {
         <div onClick={e => { e.stopPropagation(); tc(u.id) }} style={{ width: 20, height: 20, border: cm.includes(u.id) ? "none" : "2px solid #D6D3D1", borderRadius: 5, background: cm.includes(u.id) ? "#2563EB" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>{cm.includes(u.id) ? "✓" : ""}</div>
       </div>
     </Card>
-  );
+  ); };
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -93,7 +101,7 @@ export default function App() {
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
           <div onClick={() => nv("home")} style={{ fontFamily: "'Playfair Display',serif", fontSize: 19, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>📖 <span className="grad-text">Read More</span></div>
           <div style={{ display: "flex", gap: 2 }}>
-            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
+            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
               <button key={k} onClick={() => nv(k)} style={{ padding: "6px 10px", borderRadius: 8, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#2563EB" : "#78716C", background: pg === k ? "#EFF6FF" : "transparent", border: "none" }}>{icon}</button>
             )}
           </div>
@@ -105,7 +113,7 @@ export default function App() {
         {/* ═══ HOME ═══ */}
         {pg === "home" && <div className="page-enter">
           <div style={{ textAlign: "center", padding: "56px 0 40px" }}>
-            <div style={{ display: "inline-flex", padding: "4px 12px", background: "#EFF6FF", color: "#2563EB", borderRadius: 14, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>✨ v4 — Country Guides + Destination Quiz + Application Tracker</div>
+            <div style={{ display: "inline-flex", padding: "4px 12px", background: "#EFF6FF", color: "#2563EB", borderRadius: 14, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>✨ v5 — Archetypes + Career Outcomes + Reviews + Peer Chat</div>
             <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: "clamp(28px,5vw,44px)", fontWeight: 700, lineHeight: 1.15, marginBottom: 12 }}>Открий <span className="grad-text">перфектния университет</span></h1>
             <p style={{ fontSize: 15, color: "#78716C", maxWidth: 480, margin: "0 auto 22px", lineHeight: 1.6 }}>70 университета от 20+ държави. RIASEC AI тест. Стипендии. Интерактивна карта. AI съветник.</p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
@@ -120,14 +128,16 @@ export default function App() {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 10, marginBottom: 32 }}>
             {[
-              { i: "🤖", bg: "#EFF6FF", t: "AI Съветник", d: "Питай за университети, стипендии, програми на български.", click: () => setChat(true) },
-              { i: "🧬", bg: "#F5F3FF", t: "RIASEC тест", d: "18 въпроса, Holland Code, radar chart, AI препоръки.", click: () => nv("test") },
+              { i: "🤖", bg: "#EFF6FF", t: "AI Съветник", d: "Питай Claude за университети, стипендии, програми.", click: () => setChat(true) },
+              { i: "🧬", bg: "#F5F3FF", t: "RIASEC тест", d: "18 въпроса → Holland Code + Архетип + AI препоръки.", click: () => nv("test") },
               { i: "🗺️", bg: "#ECFDF5", t: "Карта на Европа", d: "Интерактивна карта с всички 70 университета.", click: () => nv("browse") },
-              { i: "🌍", bg: "#F0FDF9", t: "Гайдове по държави", d: "15 държави — виза, жилище, работа, култура. + Destination Quiz!", click: () => nv("guides") },
+              { i: "🌍", bg: "#F0FDF9", t: "Гайдове по държави", d: "15 държави — виза, жилище, работа, култура. + Quiz!", click: () => nv("guides") },
               { i: "🎯", bg: "#FFF7ED", t: "Стипендии", d: "15 стипендии — Erasmus+, DAAD, Chevening и други.", click: () => nv("scholarships") },
-              { i: "📝", bg: "#FFFBEB", t: "Application Tracker", d: "Следи кандидатури, дедлайни, документи. Календар.", click: () => nv("tracker") },
+              { i: "📝", bg: "#FFFBEB", t: "Application Tracker", d: "Следи кандидатури, дедлайни, документи.", click: () => nv("tracker") },
+              { i: "🌟", bg: "#FEF9C3", t: "Отзиви", d: "Реални мнения от български студенти в чужбина.", click: () => nv("reviews") },
+              { i: "💬", bg: "#FCE7F3", t: "Чат със студенти", d: "Питай студенти-амбасадори за живота в чужбина.", click: () => nv("peers") },
               { i: "📊", bg: "#FFF1F2", t: "Сравнение", d: "Side-by-side по 15 критерия. До 4 университета.", click: () => nv("compare") },
-              { i: "📋", bg: "#ECFEFF", t: "Табло", d: "Radar chart, препоръки, любими — всичко на едно място.", click: () => nv("dash") },
+              { i: "📋", bg: "#ECFEFF", t: "Табло", d: "Radar chart, кариерни данни, любими — всичко на едно място.", click: () => nv("dash") },
             ].map((f, i) => <Card key={i} style={{ cursor: "pointer" }} onClick={f.click}>
               <div style={{ width: 36, height: 36, borderRadius: 9, background: f.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, marginBottom: 8 }}>{f.i}</div>
               <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3 }}>{f.t}</div>
@@ -178,6 +188,41 @@ export default function App() {
                 </div>
               </Card>
             </div>
+
+            {/* ── PERSONALITY ARCHETYPE ── */}
+            {(() => { const arch = getArchetype(getR().top3.slice(0, 2)); return (
+              <Card style={{ marginBottom: 20, background: "linear-gradient(135deg,#EFF6FF,#F5F3FF)", border: "none", textAlign: "center", padding: "20px", animation: "scaleIn .5s ease-out .3s both" }}>
+                <div style={{ fontSize: 44, marginBottom: 6 }}>{arch.emoji}</div>
+                <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, marginBottom: 2 }}>Ти си <span className="grad-text">{arch.name}</span></div>
+                <p style={{ fontSize: 12, color: "#57534E", lineHeight: 1.5, maxWidth: 400, margin: "0 auto 10px" }}>{arch.desc}</p>
+                <div style={{ display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap", marginBottom: 8 }}>
+                  <span style={{ padding: "4px 12px", borderRadius: 8, fontSize: 10, background: "#ECFDF5", color: "#059669" }}>💼 {arch.careers}</span>
+                  <span style={{ padding: "4px 12px", borderRadius: 8, fontSize: 10, background: "#FFF7ED", color: "#EA580C" }}>⭐ {arch.famous}</span>
+                </div>
+                <div style={{ fontSize: 10, color: "#A8A29E" }}>Holland Code: {getR().code} → Архетип базиран на топ 2 типа</div>
+              </Card>
+            ); })()}
+
+            {/* ── CAREER OUTCOMES FOR TOP RECOMMENDED COUNTRIES ── */}
+            {(() => { const topCountries = [...new Set(gU().map(u => u.country))].slice(0, 4); return topCountries.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>👔 Кариерни перспективи по държава</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 8 }}>
+                  {topCountries.map((c, i) => { const co = careerOutcomes[c]; if (!co) return null; return (
+                    <Card key={c} style={{ padding: 10, textAlign: "center", animation: `scaleIn .3s ease-out ${i * 0.06}s both` }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>{c}</div>
+                      <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, fontWeight: 700, color: "#059669" }}>€{(co.salary1y / 1000).toFixed(0)}K</div>
+                      <div style={{ fontSize: 9, color: "#A8A29E", marginBottom: 4 }}>1-ва год след дипломата</div>
+                      <div style={{ fontSize: 10, color: "#78716C" }}>→ €{(co.salary3y / 1000).toFixed(0)}K (3г) → €{(co.salary5y / 1000).toFixed(0)}K (5г)</div>
+                      <div style={{ height: 3, background: "#E7E5E4", borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
+                        <div style={{ height: "100%", background: "#059669", width: `${Math.min(co.salary5y / 950, 100)}%`, borderRadius: 2 }} />
+                      </div>
+                      <div style={{ fontSize: 9, color: "#A8A29E", marginTop: 4 }}>🏢 {co.topIndustries.slice(0, 2).join(", ")} · 📉 {co.unemployment}% безр.</div>
+                    </Card>
+                  ); })}
+                </div>
+              </div>
+            ); })()}
 
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>🎯 Препоръчани области</div>
@@ -293,6 +338,12 @@ export default function App() {
         {/* ═══ APPLICATION TRACKER ═══ */}
         {pg === "tracker" && <ApplicationTracker />}
 
+        {/* ═══ STUDENT REVIEWS ═══ */}
+        {pg === "reviews" && <div style={{ padding: "32px 0" }}><StudentReviews /></div>}
+
+        {/* ═══ PEER CHAT ═══ */}
+        {pg === "peers" && <PeerChat />}
+
         {/* ═══ COMPARE ═══ */}
         {pg === "compare" && <div style={{ padding: "32px 0" }} className="page-enter">
           <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 24, fontWeight: 600, marginBottom: 4 }}>Сравнение</h2>
@@ -345,8 +396,37 @@ export default function App() {
                   </Card>)}
               </div>
 
+              {/* Archetype on dashboard */}
+              {(() => { const arch = getArchetype(getR().top3.slice(0, 2)); return (
+                <Card style={{ marginBottom: 16, background: "linear-gradient(135deg,#EFF6FF,#F5F3FF)", border: "none", display: "flex", gap: 12, alignItems: "center", padding: "14px 18px", animation: "scaleIn .4s ease-out .2s both" }}>
+                  <div style={{ fontSize: 34 }}>{arch.emoji}</div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>Архетип: <span className="grad-text">{arch.name}</span></div>
+                    <div style={{ fontSize: 11, color: "#57534E" }}>{arch.desc}</div>
+                    <div style={{ fontSize: 10, color: "#A8A29E", marginTop: 2 }}>💼 {arch.careers} · ⭐ {arch.famous}</div>
+                  </div>
+                </Card>
+              ); })()}
+
               <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, marginBottom: 10 }}>🏆 Топ препоръки</h3>
               {gU().slice(0, 5).map(u => <UniRow key={u.id} u={u} />)}
+
+              {/* Career outcomes on dashboard */}
+              {(() => { const topC = [...new Set(gU().map(u => u.country))].slice(0, 3); return topC.length > 0 && (
+                <div style={{ marginTop: 16, marginBottom: 16 }}>
+                  <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, marginBottom: 10 }}>👔 Кариера след дипломата</h3>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 8 }}>
+                    {topC.map((c, i) => { const co = careerOutcomes[c]; if (!co) return null; return (
+                      <Card key={c} style={{ padding: 10, textAlign: "center" }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 3 }}>{c}</div>
+                        <div style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 700, color: "#059669" }}>€{(co.salary1y / 1000).toFixed(0)}K → €{(co.salary5y / 1000).toFixed(0)}K</div>
+                        <div style={{ fontSize: 9, color: "#A8A29E" }}>1г → 5г · 🏢 {co.topIndustries[0]}</div>
+                      </Card>
+                    ); })}
+                  </div>
+                </div>
+              ); })()}
+
               {fav.length > 0 && <><h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 17, marginBottom: 10, marginTop: 16 }}>❤️ Любими</h3>
                 {universities.filter(u => fav.includes(u.id)).map(u => <UniRow key={u.id} u={u} />)}</>}
             </div>}
@@ -366,7 +446,7 @@ export default function App() {
       <AIChatbot isOpen={chat} onClose={() => setChat(false)} />
 
       <div style={{ borderTop: "1px solid #E7E5E4", padding: "20px", textAlign: "center", color: "#A8A29E", fontSize: 10 }}>
-        📖 Find The Uni v4 © 2026 · Country Guides + Tracker + AI + RIASEC
+        📖 Find The Uni v5 © 2026 · Archetypes + Career Data + Reviews + Peer Chat + PWA
       </div>
     </div>
   );
