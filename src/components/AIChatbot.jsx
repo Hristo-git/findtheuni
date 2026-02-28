@@ -426,11 +426,25 @@ export default function AIChatbot({ isOpen, onClose }) {
     setMsgs(prev => {
       const next = [...prev, { from: 'user', text: userMsg }];
       setTyping(true);
-      setTimeout(() => {
-        const reply = getReply(userMsg, next);
-        setMsgs(p => [...p, { from: 'ai', text: reply }]);
-        setTyping(false);
-      }, 600 + Math.random() * 400);
+
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 9000);
+
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg, history: next }),
+        signal: ctrl.signal,
+      })
+        .then(r => { clearTimeout(timeout); return r.ok ? r.json() : Promise.reject(); })
+        .then(data => setMsgs(p => [...p, { from: 'ai', text: data.reply }]))
+        .catch(() => {
+          // Fallback to local pattern matching when API is unavailable
+          const reply = getReply(userMsg, next);
+          setMsgs(p => [...p, { from: 'ai', text: reply }]);
+        })
+        .finally(() => setTyping(false));
+
       return next;
     });
   };
