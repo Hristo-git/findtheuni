@@ -51,6 +51,33 @@ const fieldCurriculum = {
   'Електроника':     '4 год. · 240 ECTS · ~38 дисциплини + лабораторна + проектна работа',
 };
 
+// Application deadlines per country
+const countryDeadlines = {
+  'UK':          '📅 UCAS: **15 окт** (Oxford/Cambridge) · **15 яну** (повечето) · **30 юни** (свободни места)\n   🌐 ucas.com',
+  'Германия':    '📅 Зимен сем. (окт): **1–15 юли** · Летен сем. (апр): **1–15 дек**\n   🌐 uni-assist.de / директно в университета',
+  'Австрия':     '📅 Зимен сем.: **до 5 септември** · Летен сем.: **до 5 февруари**\n   🌐 direktno в университета',
+  'Швейцария':   '📅 ETH/EPFL: **30 април** (изпит юни/юли) · Останали: **30 юли**\n   🌐 ethadmissions.ethz.ch',
+  'Франция':     '📅 Campus France: **януари–март** · Grandes Écoles: **февруари–юни** (конкурс)\n   🌐 campusfrance.org',
+  'Нидерландия': '📅 EU: **1 май** · Non-EU: **1 апр** · Избрани програми: **15 яну**\n   🌐 studielink.nl',
+  'Швеция':      '📅 **15 януари** (есенен семестър, чрез universityadmissions.se)\n   🌐 universityadmissions.se',
+  'Дания':       '📅 EU: **15 март** · Non-EU: **1 март**\n   🌐 optagelse.dk',
+  'Норвегия':    '📅 **15 април** (чрез samordnaopptak.no) · Резултати: юли\n   🌐 samordnaopptak.no',
+  'Финландия':   '📅 **20 януари** за повечето програми\n   🌐 studyinfo.fi',
+  'Белгия':      '📅 **1 март – 1 юни** в зависимост от университета',
+  'Чехия':       '📅 **ноември – февруари** за следващата академична година',
+  'Полша':       '📅 **май – юли** · Резултати: юли–август',
+  'Испания':     '📅 **юни – юли** (след EvAU) · Запис: юли–септември',
+  'Италия':      '📅 **април – юли** (varies) · Медицина IMAT: **август–септември**',
+  'Ирландия':    '📅 CAO: **1 февруари** (нормален) · **1 юли** (с допълнителна такса)\n   🌐 cao.ie',
+  'Португалия':  '📅 Национална кампания: **март – юни** · Резултати: юли',
+  'Гърция':      '📅 Панелини: **юни** · Записване: **август–септември**',
+  'Румъния':     '📅 **юли – август** след Bacalaureat · Частни: по-гъвкаво',
+  'Хърватия':    '📅 **юни – юли** след državna matura',
+  'Сърбия':      '📅 **юни – юли** · Приемен изпит: юли',
+  'Унгария':     '📅 **15 февруари** (чрез felvi.hu) · Резултати: юли',
+  'България':    '📅 **юли** (след ДЗИ) · Класиране: юли–август',
+};
+
 // Trigram similarity for fuzzy matching Bulgarian text (handles typos)
 function trigramSim(a, b) {
   const tgs = s => {
@@ -99,6 +126,7 @@ function getReply(msg, history = []) {
   const isShowMore = ['дай ми', 'покажи', 'повече', 'конкретно', 'поне', 'още', 'пълен', 'всички', 'списък'].some(w => lower.includes(w));
   const isExamQ = ['изпит', 'приемен', 'кандидатствам', 'кандидатстване', 'документи', 'изисквания', 'входящ', 'конкурс', 'прием за'].some(w => lower.includes(w));
   const isHoursQ = ['хорариум', 'кредити', 'ects', 'учебен план', 'дисциплини', 'семестри', 'учебна програма', 'часове', 'натоварване'].some(w => lower.includes(w));
+  const isDeadlineQ = ['кога', 'дата', 'дедлайн', 'срок', 'до кога', 'период за кандидатстване', 'краен срок', 'прием кога', 'кандидатства кога'].some(w => lower.includes(w));
 
   // Context-based replies (only when previous answer had real data)
   if (isCostQ && contextUnis.length > 0) {
@@ -137,6 +165,26 @@ function getReply(msg, history = []) {
       `${u.emoji} **${u.nameEn}** (${u.city}, ${u.country}) — #${u.rank} | ${tuitionStr(u)}`
     ).join('\n');
     return `Всички университети за **${contextField}** (${unis.length}):\n\n${list}`;
+  }
+
+  // Application deadlines — context-based (priority over exam handler)
+  if (isDeadlineQ && contextUnis.length > 0) {
+    const list = contextUnis.slice(0, 8).map(u => {
+      const dl = countryDeadlines[u.country] || '📅 Провери сайта на университета';
+      return `${u.emoji} **${u.nameEn}** (${u.country})\n   ${dl}`;
+    }).join('\n');
+    return `Срокове за кандидатстване (споменати университети):\n\n${list}`;
+  }
+  if (isDeadlineQ && contextField) {
+    const unis = universities.filter(u => u.fields.includes(contextField)).sort((a, b) => a.rank - b.rank);
+    const byCountry = {};
+    unis.forEach(u => { if (!byCountry[u.country]) byCountry[u.country] = []; byCountry[u.country].push(u); });
+    const list = Object.entries(byCountry).slice(0, 8).map(([country, us]) => {
+      const dl = countryDeadlines[country] || '📅 Провери сайта на университета';
+      const names = us.map(u => `${u.emoji} ${u.nameEn}`).join(', ');
+      return `**${country}** (${names})\n   ${dl}`;
+    }).join('\n');
+    return `Срокове за кандидатстване — **${contextField}**:\n\n${list}`;
   }
 
   // Exam requirements — context-based
