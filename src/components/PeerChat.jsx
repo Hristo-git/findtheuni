@@ -34,21 +34,21 @@ export default function PeerChat() {
 
         <Card style={{ padding:'20px', marginBottom:14 }}>
           <div style={{ display:'flex', gap:14, alignItems:'center', marginBottom:14 }}>
-            <div style={{ width:52, height:52, borderRadius:14, background:'#1E1E21', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26 }}>{selectedAmb.avatar}</div>
+            <div style={{ width:52, height:52, borderRadius:14, background:'rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26 }}>{selectedAmb.avatar}</div>
             <div style={{ flex:1 }}>
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <span style={{ fontSize:16, fontWeight:600 }}>{selectedAmb.name}</span>
+                <span style={{ fontSize:16, fontWeight:600, color:'#FFFFFF' }}>{selectedAmb.name}</span>
                 <span style={{ width:8, height:8, borderRadius:'50%', background: selectedAmb.online ? '#22C55E' : '#71717A' }} />
                 <span style={{ fontSize:10, color: selectedAmb.online ? '#22C55E' : '#71717A' }}>{selectedAmb.online ? 'Онлайн' : 'Офлайн'}</span>
               </div>
-              <div style={{ fontSize:12, color:'#78716C' }}>{selectedAmb.uni} · {selectedAmb.program} · {selectedAmb.year}-ри курс</div>
+              <div style={{ fontSize:12, color:'#71717A' }}>{selectedAmb.uni} · {selectedAmb.program} · {selectedAmb.year}-ри курс</div>
             </div>
           </div>
           <p style={{ fontSize:12, color:'#A1A1AA', lineHeight:1.5, marginBottom:10 }}>{selectedAmb.bio}</p>
           <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
-            {selectedAmb.lang.map(l => <span key={l} style={{ padding:'2px 8px', borderRadius:6, fontSize:10, background:'rgba(93,95,239,0.15)', color:'#818CF8' }}>{l}</span>)}
+            {selectedAmb.lang.map(l => <span key={l} style={{ padding:'2px 8px', borderRadius:100, fontSize:10, background:'rgba(204,255,0,0.1)', color:'#CCFF00' }}>{l}</span>)}
           </div>
-          <div style={{ display:'flex', gap:12, fontSize:10, color:'#A8A29E' }}>
+          <div style={{ display:'flex', gap:12, fontSize:10, color:'#71717A' }}>
             <span>💬 {selectedAmb.responses} отговора</span>
             <span>⏱️ Отговаря за {selectedAmb.avgTime}</span>
           </div>
@@ -57,16 +57,16 @@ export default function PeerChat() {
         {/* Message form */}
         {!sent ? (
           <Card>
-            <div style={{ fontSize:13, fontWeight:600, marginBottom:8 }}>💬 Изпрати съобщение</div>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:8, color:'#FFFFFF' }}>💬 Изпрати съобщение</div>
             <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={4}
               placeholder={`Здравей ${selectedAmb.name.split(' ')[0]}! Имам въпрос за ${selectedAmb.uni}...`}
-              style={{ width:'100%', padding:'10px', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, fontSize:12, fontFamily:'inherit', resize:'vertical', marginBottom:8, background:'#0A0A0B', color:'#fff' }} />
+              style={{ width:'100%', padding:'10px', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, fontSize:12, fontFamily:'inherit', resize:'vertical', marginBottom:8, background:'#0A0A0B', color:'#A1A1AA' }} />
             <div style={{ display:'flex', gap:8 }}>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:10, color:'#A8A29E', marginBottom:4 }}>Примерни въпроси:</div>
+                <div style={{ fontSize:10, color:'#71717A', marginBottom:4 }}>Примерни въпроси:</div>
                 <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
                   {['Как е студентският живот?','Трудно ли е приемането?','Колко струва на месец?','Има ли стажове?'].map(q =>
-                    <button key={q} onClick={() => setMsg(q)} style={{ padding:'3px 8px', borderRadius:6, fontSize:9, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', color:'#A1A1AA', cursor:'pointer', fontFamily:'inherit' }}>{q}</button>
+                    <button key={q} onClick={() => setMsg(q)} style={{ padding:'3px 8px', borderRadius:100, fontSize:9, border:'1px solid rgba(255,255,255,0.08)', background:'#0A0A0B', color:'#71717A', cursor:'pointer', fontFamily:'inherit' }}>{q}</button>
                   )}
                 </div>
               </div>
@@ -74,13 +74,13 @@ export default function PeerChat() {
             </div>
           </Card>
         ) : (
-          <Card style={{ background:'rgba(34,197,94,0.15)', border:'1px solid rgba(34,197,94,0.3)', textAlign:'center', padding:'24px' }}>
+          <Card style={{ background:'rgba(34,197,94,0.1)', border:'1px solid rgba(34,197,94,0.2)', textAlign:'center', padding:'24px' }}>
             <div style={{ fontSize:36, marginBottom:8 }}>✅</div>
             <div style={{ fontSize:14, fontWeight:600, color:'#22C55E', marginBottom:4 }}>Съобщението е изпратено!</div>
-            <p style={{ fontSize:12, color:'#A1A1AA' }}>
+            <p style={{ fontSize:12, color:'#22C55E' }}>
               {selectedAmb.name.split(' ')[0]} обикновено отговаря за {selectedAmb.avgTime}. Ще получиш имейл когато отговори.
             </p>
-            <p style={{ fontSize:10, color:'#A8A29E', marginTop:8 }}>
+            <p style={{ fontSize:10, color:'#71717A', marginTop:8 }}>
               ⚠️ Peer-to-peer чатът е в бета. В пълната версия ще получиш real-time нотификации.
             </p>
           </Card>
@@ -93,10 +93,10 @@ export default function PeerChat() {
     <div style={{ padding:'32px 0' }} className="page-enter">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
         <div>
-          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:24, fontWeight:600 }}>💬 Чат със студенти</h2>
-          <p style={{ color:'#78716C', fontSize:13, marginBottom:14 }}>Попитай реални български студенти в чужбина</p>
+          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:24, fontWeight:600, color:'#FFFFFF' }}>💬 Чат със студенти</h2>
+          <p style={{ color:'#71717A', fontSize:13, marginBottom:14 }}>Попитай реални български студенти в чужбина</p>
         </div>
-        <span style={{ padding:'3px 10px', borderRadius:8, fontSize:10, background:'rgba(245,158,11,0.15)', color:'#F59E0B', fontWeight:600 }}>🧪 Beta</span>
+        <span style={{ padding:'3px 10px', borderRadius:100, fontSize:10, background:'rgba(245,158,11,0.1)', color:'#F59E0B', fontWeight:600 }}>🧪 Beta</span>
       </div>
 
       {/* Info banner */}
@@ -104,8 +104,8 @@ export default function PeerChat() {
         <div style={{ display:'flex', gap:10, alignItems:'center' }}>
           <span style={{ fontSize:28 }}>🎓</span>
           <div>
-            <div style={{ fontSize:12, fontWeight:600 }}>Student Ambassadors</div>
-            <div style={{ fontSize:11, color:'#78716C', lineHeight:1.4 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:'#FFFFFF' }}>Student Ambassadors</div>
+            <div style={{ fontSize:11, color:'#A1A1AA', lineHeight:1.4 }}>
               Нашите амбасадори са реални български студенти в европейски университети.
               Питай за живота, приемането, стажове — всичко от първо лице.
             </div>
@@ -118,17 +118,17 @@ export default function PeerChat() {
         <div style={{ flex:1, position:'relative' }}>
           <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:14 }}>🔍</span>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Търси по име, университет, програма..."
-            style={{ width:'100%', padding:'9px 10px 9px 32px', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, fontSize:12, fontFamily:'inherit', background:'#0A0A0B', color:'#fff', outline:'none' }} />
+            style={{ width:'100%', padding:'9px 10px 9px 32px', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, fontSize:12, fontFamily:'inherit', background:'#0A0A0B', color:'#A1A1AA', outline:'none' }} />
         </div>
         <select value={filterCountry} onChange={e => setFilterCountry(e.target.value)}
-          style={{ padding:'8px', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, fontSize:11, fontFamily:'inherit', background:'#0A0A0B', color:'#fff' }}>
+          style={{ padding:'8px', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, fontSize:11, fontFamily:'inherit', background:'#0A0A0B', color:'#A1A1AA' }}>
           <option value="">Всички държави</option>
           {countries.map(c => <option key={c}>{c}</option>)}
         </select>
       </div>
 
       {/* Online count */}
-      <div style={{ fontSize:11, color:'#78716C', marginBottom:10 }}>
+      <div style={{ fontSize:11, color:'#71717A', marginBottom:10 }}>
         <span style={{ display:'inline-block', width:7, height:7, borderRadius:'50%', background:'#22C55E', marginRight:4 }} />
         {filtered.filter(a => a.online).length} онлайн от {filtered.length} амбасадори
       </div>
@@ -140,13 +140,13 @@ export default function PeerChat() {
             style={{ cursor:'pointer', padding:'14px 16px', animation:`slideIn .3s ease-out ${i*0.04}s both` }}>
             <div style={{ display:'flex', gap:12, alignItems:'center' }}>
               <div style={{ position:'relative' }}>
-                <div style={{ width:44, height:44, borderRadius:12, background:'#1E1E21', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>{a.avatar}</div>
+                <div style={{ width:44, height:44, borderRadius:12, background:'rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22 }}>{a.avatar}</div>
                 <div style={{ position:'absolute', bottom:-1, right:-1, width:10, height:10, borderRadius:'50%', background: a.online ? '#22C55E' : '#71717A', border:'2px solid #161618' }} />
               </div>
               <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:13, fontWeight:600 }}>{a.name}</div>
-                <div style={{ fontSize:11, color:'#78716C' }}>{a.uni} · {a.program} · {a.year}-ри курс</div>
-                <div style={{ fontSize:10, color:'#A8A29E', marginTop:2 }}>🌐 {a.lang.join(', ')} · 💬 {a.responses} отг. · ⏱️ {a.avgTime}</div>
+                <div style={{ fontSize:13, fontWeight:600, color:'#FFFFFF' }}>{a.name}</div>
+                <div style={{ fontSize:11, color:'#71717A' }}>{a.uni} · {a.program} · {a.year}-ри курс</div>
+                <div style={{ fontSize:10, color:'#71717A', marginTop:2 }}>🌐 {a.lang.join(', ')} · 💬 {a.responses} отг. · ⏱️ {a.avgTime}</div>
               </div>
               <span style={{ color:'#CCFF00', fontSize:12, fontWeight:600 }}>Чат →</span>
             </div>
@@ -155,18 +155,18 @@ export default function PeerChat() {
       </div>
 
       {filtered.length === 0 && (
-        <div style={{ textAlign:'center', padding:'40px 0', color:'#A8A29E' }}>
+        <div style={{ textAlign:'center', padding:'40px 0', color:'#71717A' }}>
           <div style={{ fontSize:40, marginBottom:8 }}>🔍</div>
           <p>Няма амбасадори по тези критерии.</p>
         </div>
       )}
 
       {/* CTA for becoming ambassador */}
-      <Card style={{ marginTop:16, background:'linear-gradient(135deg,#5D5FEF,#CCFF00)', border:'none', textAlign:'center', padding:'20px' }}>
+      <Card style={{ marginTop:16, background:'linear-gradient(135deg,#CCFF00,#5D5FEF)', border:'none', textAlign:'center', padding:'20px' }}>
         <div style={{ fontSize:22, marginBottom:6 }}>🎓</div>
-        <div style={{ fontSize:14, fontWeight:600, color:'white', marginBottom:4 }}>Учиш в чужбина? Стани амбасадор!</div>
-        <p style={{ fontSize:11, color:'rgba(255,255,255,0.8)', marginBottom:10 }}>Помагай на бъдещи студенти и получи сертификат + менторски опит.</p>
-        <button style={{ padding:'8px 18px', borderRadius:10, background:'#0A0A0B', color:'#CCFF00', fontWeight:600, fontSize:12, border:'none', cursor:'pointer', fontFamily:'inherit' }}>Кандидатствай →</button>
+        <div style={{ fontSize:14, fontWeight:600, color:'#0A0A0B', marginBottom:4 }}>Учиш в чужбина? Стани амбасадор!</div>
+        <p style={{ fontSize:11, color:'rgba(10,10,11,0.7)', marginBottom:10 }}>Помагай на бъдещи студенти и получи сертификат + менторски опит.</p>
+        <button style={{ padding:'8px 18px', borderRadius:100, background:'#0A0A0B', color:'#CCFF00', fontWeight:600, fontSize:12, border:'none', cursor:'pointer', fontFamily:'inherit' }}>Кандидатствай →</button>
       </Card>
     </div>
   );
