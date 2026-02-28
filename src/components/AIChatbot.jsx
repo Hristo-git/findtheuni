@@ -4,6 +4,53 @@ import { universities, fieldEmoji } from '../data/universities';
 
 const tuitionStr = u => u.tuition[0] === 0 && u.tuition[1] === 0 ? '🎉 Безплатно' : `€${u.tuition[0]}–${u.tuition[1]}/год`;
 
+// Short entrance requirement per country (used in context-based exam replies)
+const countryExamShort = {
+  'UK':          'A-Levels (BBB–A*AA) + Personal Statement + IELTS 6.5',
+  'Германия':    'Abitur/Matura (~2.5) + DSH/TestDaF | Медицина: TMS тест',
+  'Австрия':     'Matura + IELTS/DSH | Медицина: MedAT тест',
+  'Швейцария':   'Matura + вход. изпит на ETH/EPFL за чужденци + IELTS C1',
+  'Франция':     'Baccalauréat | Grandes Écoles: конкурс след 2г. подготовка',
+  'Нидерландия': 'VWO диплома + IELTS 6.5 (повечето програми на английски)',
+  'Швеция':      'Гимназиална диплома + мотивационно (без изпит!) + IELTS 6.5',
+  'Дания':       'Гимназия + IELTS 6.5 (без входящ изпит)',
+  'Норвегия':    'Гимназия (без изпит и без такси!) + IELTS 6.0',
+  'Финландия':   'Гимназия + входен тест по специалността + IELTS 6.5',
+  'Белгия':      'Гимназиална диплома + специф. изпит + IELTS',
+  'Чехия':       'Гимназия + вътрешен изпит по предметите | на чешки = безплатно',
+  'Полша':       'Гимназия + Matura / вътрешен тест + IELTS 5.5',
+  'Испания':     'Bachillerato + EvAU (бивш Selectividad) + IELTS 6.0',
+  'Италия':      'Maturità + IELTS C1 | Медицина: IMAT тест на английски',
+  'Ирландия':    'Leaving Certificate (350–500т.) + IELTS 6.5',
+  'Португалия':  'Ensino Secundário + национален изпит + IELTS 6.0',
+  'Гърция':      'Απολυτήριο + Панелини (национален изпит)',
+  'Румъния':     'Bacalaureat + вход. изпит на университета',
+  'Хърватия':    'Matura + državna matura + IELTS',
+  'Сърбия':      'Гимназия + приемен изпит по предметите',
+  'Унгария':     'Érettségi + IELTS 5.5 (много програми на английски)',
+  'България':    'ДЗИ + вход. изпит (зависи от специалността)',
+};
+
+// ECTS & curriculum info per field
+const fieldCurriculum = {
+  'Медицина':        '6 год. · 360 ECTS · ~35 дисциплини + 5 000+ часа клинична практика',
+  'Право':           '4–5 год. · 240–300 ECTS · ~30 дисциплини + стаж в съд/кантора',
+  'Инженерство':     '3–4 год. · 180–240 ECTS · ~40 дисциплини + производствена практика',
+  'IT':              '3 год. · 180 ECTS · ~30 дисциплини (алгоритми, AI, бази, мрежи) + стаж',
+  'Архитектура':     '5 год. · 300 ECTS · ~45 дисциплини + архитект. проекти + портфолио',
+  'Бизнес':          '3–4 год. · 180–240 ECTS · ~25 дисциплини + стажуване',
+  'Фармация':        '5 год. · 300 ECTS · ~40 дисциплини + аптечна практика',
+  'Природни науки':  '3–4 год. · 180–240 ECTS · ~35 дисциплини + лабораторна работа',
+  'Хуманитарни':     '3–4 год. · 180 ECTS · ~28 дисциплини + изследване + теза',
+  'Финанси':         '3–4 год. · 180–240 ECTS · ~25 дисциплини + стаж',
+  'Икономика':       '3–4 год. · 180–240 ECTS · ~28 дисциплини + стаж',
+  'Дизайн':          '3–4 год. · 180–240 ECTS · ~30 дисциплини + проектно портфолио',
+  'Изкуства':        '3–4 год. · 180 ECTS · ~25 дисциплини + творческо портфолио',
+  'Маркетинг':       '3 год. · 180 ECTS · ~24 дисциплини + стаж в агенция/компания',
+  'Педагогика':      '4 год. · 240 ECTS · ~32 дисциплини + учителска практика (300+ часа)',
+  'Електроника':     '4 год. · 240 ECTS · ~38 дисциплини + лабораторна + проектна работа',
+};
+
 // Trigram similarity for fuzzy matching Bulgarian text (handles typos)
 function trigramSim(a, b) {
   const tgs = s => {
@@ -50,6 +97,8 @@ function getReply(msg, history = []) {
   const isPriceQ = ['цена', 'цени', 'такса', 'такси', 'колко струва', 'колко коства', 'колко са', 'цените'].some(w => lower.includes(w));
   const isCostQ = ['издръжка', 'издръжката', 'разходи', 'живот', 'наем', 'скъпо', 'евтино', 'стойността'].some(w => lower.includes(w));
   const isShowMore = ['дай ми', 'покажи', 'повече', 'конкретно', 'поне', 'още', 'пълен', 'всички', 'списък'].some(w => lower.includes(w));
+  const isExamQ = ['изпит', 'приемен', 'кандидатствам', 'кандидатстване', 'документи', 'изисквания', 'входящ', 'конкурс', 'прием за'].some(w => lower.includes(w));
+  const isHoursQ = ['хорариум', 'кредити', 'ects', 'учебен план', 'дисциплини', 'семестри', 'учебна програма', 'часове', 'натоварване'].some(w => lower.includes(w));
 
   // Context-based replies (only when previous answer had real data)
   if (isCostQ && contextUnis.length > 0) {
@@ -88,6 +137,37 @@ function getReply(msg, history = []) {
       `${u.emoji} **${u.nameEn}** (${u.city}, ${u.country}) — #${u.rank} | ${tuitionStr(u)}`
     ).join('\n');
     return `Всички университети за **${contextField}** (${unis.length}):\n\n${list}`;
+  }
+
+  // Exam requirements — context-based
+  if (isExamQ && contextUnis.length > 0) {
+    const list = contextUnis.slice(0, 8).map(u => {
+      const req = countryExamShort[u.country] || 'Завършена гимназия + IELTS/TOEFL';
+      return `${u.emoji} **${u.nameEn}** (${u.country}) — прием: ${u.acceptance}%\n   📋 ${req}`;
+    }).join('\n');
+    return `Приемни изисквания за споменатите университети:\n\n${list}\n\n💡 Питай "изпити за [страна]" за пълни детайли.`;
+  }
+  if (isExamQ && contextField) {
+    const unis = universities.filter(u => u.fields.includes(contextField)).sort((a, b) => a.rank - b.rank);
+    const list = unis.slice(0, 6).map(u => {
+      const req = countryExamShort[u.country] || 'Гимназия + IELTS';
+      return `${u.emoji} **${u.nameEn}** (${u.country}) — прием: ${u.acceptance}%\n   📋 ${req}`;
+    }).join('\n');
+    return `Приемни изисквания за **${contextField}** университети:\n\n${list}`;
+  }
+
+  // Curriculum / ECTS hours — context-based
+  if (isHoursQ && contextField) {
+    const info = fieldCurriculum[contextField] || '3–4 год. · 180–240 ECTS · ~30 дисциплини';
+    return `Учебен план за **${contextField}**:\n📚 ${info}\n\n📊 1 ECTS ≈ 25–30 часа (лекции + самостоятелна работа)\n⏱️ 30 ECTS/семестър ≈ 750–900 часа учебна натовареност`;
+  }
+  if (isHoursQ && contextUnis.length > 0) {
+    const list = contextUnis.slice(0, 6).map(u => {
+      const mainField = u.fields[0];
+      const info = fieldCurriculum[mainField] || '3–4 год. · 180–240 ECTS';
+      return `${u.emoji} **${u.nameEn}** — ${info}`;
+    }).join('\n');
+    return `Учебен план (споменати университети):\n\n${list}\n\n📊 1 ECTS ≈ 25–30 часа · Питай за конкретна специалност за детайли.`;
   }
 
   // Keyword patterns
