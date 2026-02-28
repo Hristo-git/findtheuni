@@ -78,6 +78,69 @@ const countryDeadlines = {
   'България':    '📅 **юли** (след ДЗИ) · Класиране: юли–август',
 };
 
+// Language certificate requirements per language
+const certForLang = {
+  'Английски':    'IELTS 6.5+ / TOEFL iBT 90+ (~€200–250, валидно 2 год., подготовка 2–4 мес.)',
+  'Немски':       'Goethe-Zertifikat B2/C1 или TestDaF 4-4 (~€150–200, подготовка 3–6 мес.)',
+  'Френски':      'DELF B2 / DALF C1 (~€100–150, подготовка 3–5 мес.)',
+  'Нидерландски': 'NT2 B2 или IELTS 6.5 за англоезични програми',
+  'Шведски':      'TISUS B2 или IELTS 6.5 за англоезични програми',
+  'Датски':       'Studieprøven B2 или IELTS 6.5',
+  'Норвежки':     'Bergenstesten B2 или IELTS 6.0',
+  'Фински':       'YKI B2 или IELTS 6.5',
+  'Испански':     'DELE B2 (~€120) или IELTS 6.0',
+  'Италиански':   'CILS/CELI B2 (~€90) или IELTS C1',
+  'Чешки':        'CCE B2 (обучение на чешки е безплатно!)',
+  'Полски':       'Certyfikat B2 (обучение на полски е безплатно!)',
+  'Румънски':     'DRLR B2 или IELTS 6.0',
+  'Гръцки':       'КПг B2 или IELTS 6.0',
+  'Унгарски':     'ECL B2 или IELTS 5.5',
+  'Сръбски':      'KLETT тест или IELTS 5.5',
+  'Хърватски':    'HJO B2 или IELTS 5.5',
+  'Български':    'ДЗИ / матура',
+};
+
+// Work hours allowed per country for students
+const countryWorkHours = {
+  'UK':          '20 ч/сед. по Student visa (пълно работно ваканция) · мин. £11.44/ч',
+  'Германия':    '20 ч/сед. (120 пълни дни или 240 полудни/год.) · мин. ~€12.41/ч',
+  'Австрия':     '20 ч/сед. · мин. ~€10/ч',
+  'Швейцария':   '15 ч/сед. след 6 мес. пребиваване · мин. CHF 20–22/ч',
+  'Франция':     '964 ч/год. (~18.7 ч/сед.) · SMIC ~€11.65/ч',
+  'Нидерландия': '16 ч/сед. (или пълно юни–август) · мин. €13.27/ч',
+  'Белгия':      '475 ч/год. · мин. ~€11.69/ч',
+  'Финландия':   '25 ч/сед. · мин. ~€9–12/ч (по сектор)',
+  'Ирландия':    '20 ч/сед. (40 ваканция) · мин. €12.70/ч',
+  'Испания':     '30 ч/сед. за EU студенти · мин. €8.02/ч',
+  'Италия':      '25 ч/сед. · мин. ~€7–9/ч',
+  'Португалия':  '40 ч/сед. за EU · мин. €8.17/ч',
+};
+const euWorkDefault = 'Без ограничение за EU граждани';
+
+// Visa / residence permit info per country
+function getVisaInfo(country) {
+  const special = {
+    'UK': '🛂 **Student visa** (£363 + £1334/год. IHS здравна осигуровка)\n   Нужен CAS от университета преди кандидатстване → gov.uk/student-visa',
+    'Швейцария': '🛂 **Aufenthaltsbewilligung B** — не виза, а разрешение\n   Подава се СЛЕД пристигане в Migrationsbehörde\n   Нужни: записване + ~CHF 21 000 финансово доказателство/год.',
+  };
+  if (special[country]) return special[country];
+  const regs = {
+    'Германия': 'Einwohnermeldeamt (до 14 дни)',
+    'Австрия': 'Meldeamt (до 3 дни)',
+    'Нидерландия': 'BRP регистрация + DigiD',
+    'Швеция': 'Skatteverket → personnummer',
+    'Дания': 'CPR nummer → sundhedskort',
+    'Белгия': 'Commune / Gemeente регистрация',
+    'Финландия': 'DVV регистрация',
+    'Ирландия': 'IRP карта (Irish Residence Permit)',
+    'Франция': 'OFII процедура онлайн',
+    'Испания': 'NIE номер от Полиция',
+    'Италия': 'Codice fiscale + Permesso di soggiorno',
+    'Португалия': 'Autorização de residência (SEF)',
+  };
+  return `✅ Без виза (EU гражданин)${regs[country] ? ` · Регистрация: ${regs[country]}` : ' · Регистрация в местната община'}`;
+}
+
 // Trigram similarity for fuzzy matching Bulgarian text (handles typos)
 function trigramSim(a, b) {
   const tgs = s => {
@@ -127,6 +190,13 @@ function getReply(msg, history = []) {
   const isExamQ = ['изпит', 'приемен', 'кандидатствам', 'кандидатстване', 'документи', 'изисквания', 'входящ', 'конкурс', 'прием за'].some(w => lower.includes(w));
   const isHoursQ = ['хорариум', 'кредити', 'ects', 'учебен план', 'дисциплини', 'семестри', 'учебна програма', 'часове', 'натоварване'].some(w => lower.includes(w));
   const isDeadlineQ = ['кога', 'дата', 'дедлайн', 'срок', 'до кога', 'период за кандидатстване', 'краен срок', 'прием кога', 'кандидатства кога'].some(w => lower.includes(w));
+  const isCertQ = ['ielts', 'toefl', 'goethe', 'delf', 'сертификат', 'езиков изпит', 'b2', 'c1', 'езикови'].some(w => lower.includes(w));
+  const isVisaQ = ['виза', 'пребиваване', 'student visa', 'permit', 'разрешение за'].some(w => lower.includes(w));
+  const isWorkQ = ['part-time', 'мога ли да работя', 'работя докато', 'студентска работа', 'часове работа', 'работен договор', 'колко часа работа'].some(w => lower.includes(w));
+  const isCompareQ = ['сравни', 'разлика между', 'vs '].some(w => lower.includes(w));
+  const isNostQ = ['нострификация', 'признаване на диплом', 'валидна ли е', 'призна', 'еквивалентност'].some(w => lower.includes(w));
+  const budgetMatch = lower.match(/(?:под|до|бюджет|€)\s*(\d{3,5})/);
+  const budget = budgetMatch ? parseInt(budgetMatch[1]) : null;
 
   // Context-based replies (only when previous answer had real data)
   if (isCostQ && contextUnis.length > 0) {
@@ -216,6 +286,87 @@ function getReply(msg, history = []) {
       return `${u.emoji} **${u.nameEn}** — ${info}`;
     }).join('\n');
     return `Учебен план (споменати университети):\n\n${list}\n\n📊 1 ECTS ≈ 25–30 часа · Питай за конкретна специалност за детайли.`;
+  }
+
+  // Language certificates — context-based
+  if (isCertQ && (contextUnis.length > 0 || contextField)) {
+    const unis = contextUnis.length > 0 ? contextUnis : universities.filter(u => u.fields.includes(contextField));
+    const langSet = [...new Set(unis.flatMap(u => u.languages))];
+    const list = langSet.map(lang => `🌐 **${lang}**: ${certForLang[lang] || 'IELTS 6.5+'}`).join('\n');
+    return `Езикови сертификати за показаните университети:\n\n${list}\n\n⚠️ Записвайте се 3–6 месеца преди дедлайна — местата се изчерпват!`;
+  }
+
+  // Visa / residence permit — context-based
+  if (isVisaQ && contextUnis.length > 0) {
+    const countries = [...new Set(contextUnis.map(u => u.country))];
+    const list = countries.map(c => `🏳️ **${c}**\n   ${getVisaInfo(c)}`).join('\n');
+    return `Виза / пребиваване (споменати университети):\n\n${list}`;
+  }
+  if (isVisaQ && contextField) {
+    const countries = [...new Set(universities.filter(u => u.fields.includes(contextField)).map(u => u.country))];
+    const list = countries.slice(0, 8).map(c => `🏳️ **${c}**: ${getVisaInfo(c)}`).join('\n');
+    return `Виза / пребиваване — **${contextField}** страни:\n\n${list}`;
+  }
+
+  // Work rights — context-based
+  if (isWorkQ && contextUnis.length > 0) {
+    const countries = [...new Set(contextUnis.map(u => u.country))];
+    const list = countries.map(c => `🏳️ **${c}**: ${countryWorkHours[c] || euWorkDefault}`).join('\n');
+    return `Работни часове за студенти:\n\n${list}\n\n💡 Регистрирайте се в данъчната служба преди да започнете работа.`;
+  }
+  if (isWorkQ && contextField) {
+    const countries = [...new Set(universities.filter(u => u.fields.includes(contextField)).map(u => u.country))];
+    const list = countries.slice(0, 8).map(c => `🏳️ **${c}**: ${countryWorkHours[c] || euWorkDefault}`).join('\n');
+    return `Работни часове за студенти — **${contextField}** страни:\n\n${list}`;
+  }
+
+  // Nostrification — static (not context-dependent)
+  if (isNostQ) {
+    return `Признаване на българска диплома в чужбина:\n\n✅ **EU/EEA** — Матурата ДЗИ е призната автоматично по Лисабонската конвенция (Bologna Process). Не се изисква допълнителна нострификация за кандидатстване.\n✅ **UK** — UK ENIC/NARIC признава български дипломи\n✅ **Швейцария** — признава чрез ENIC-NARIC\n⚠️ **Медицина/Фармация/Право** — след завършване може да се изисква нострификация за практикуване в друга страна (отделна процедура)\n\n📋 При нужда: Национален NARIC център → naric.bg`;
+  }
+
+  // Compare two universities
+  if (isCompareQ) {
+    const matches = universities.filter(u => lower.includes(u.nameEn.toLowerCase()) || lower.includes(u.name.toLowerCase()));
+    if (matches.length >= 2) {
+      const [a, b] = matches;
+      const total = u => Math.round(u.tuition[1] / 12) + u.costOfLiving;
+      return `📊 **${a.nameEn}** vs **${b.nameEn}**\n\n` +
+        `🏆 Ранг:       #${a.rank} vs #${b.rank}\n` +
+        `💰 Такса:      ${tuitionStr(a)} vs ${tuitionStr(b)}\n` +
+        `🏙️ Живот:      €${a.costOfLiving}/мес vs €${b.costOfLiving}/мес\n` +
+        `💳 Общо/мес:   ~€${total(a)} vs ~€${total(b)}\n` +
+        `⭐ Рейтинг:    ${a.rating}/5 vs ${b.rating}/5\n` +
+        `👔 Заетост:    ${a.employability}% vs ${b.employability}%\n` +
+        `🎯 Прием:      ${a.acceptance}% vs ${b.acceptance}%\n` +
+        `📍 Град:       ${a.city} vs ${b.city}\n` +
+        `🏛️ Тип:        ${a.type === 'public' ? 'Държавен' : 'Частен'} vs ${b.type === 'public' ? 'Държавен' : 'Частен'}\n` +
+        `📚 Програми:   ${a.programs.slice(0, 2).join(', ')} vs ${b.programs.slice(0, 2).join(', ')}`;
+    }
+  }
+
+  // Budget filter
+  if (budget) {
+    const base = contextField ? universities.filter(u => u.fields.includes(contextField)) : universities;
+    const filtered = base.filter(u => {
+      const monthlyFee = u.tuition[1] === 0 ? 0 : Math.round(u.tuition[1] / 12);
+      return (monthlyFee + u.costOfLiving) <= budget;
+    }).sort((a, b) => {
+      const aT = (a.tuition[1] === 0 ? 0 : Math.round(a.tuition[1] / 12)) + a.costOfLiving;
+      const bT = (b.tuition[1] === 0 ? 0 : Math.round(b.tuition[1] / 12)) + b.costOfLiving;
+      return aT - bT;
+    });
+    if (filtered.length > 0) {
+      const list = filtered.slice(0, 10).map(u => {
+        const fee = u.tuition[1] === 0 ? 0 : Math.round(u.tuition[1] / 12);
+        const total = fee + u.costOfLiving;
+        const fieldNote = contextField ? '' : ` · ${u.fields.slice(0, 2).join(', ')}`;
+        return `${u.emoji} **${u.nameEn}** (${u.country}) — ~€${total}/мес${fieldNote}`;
+      }).join('\n');
+      const scope = contextField ? ` (${contextField})` : '';
+      return `Университети в бюджет до **€${budget}/мес**${scope} (такса + живот):\n\n${list}`;
+    }
+    return `Няма университети в бюджет до €${budget}/мес. Опитай с по-висока сума — минималното е ~€480/мес (България).`;
   }
 
   // Keyword patterns
@@ -324,7 +475,7 @@ export default function AIChatbot({ isOpen, onClose }) {
 
       {/* Quick actions */}
       <div style={{ padding: '6px 14px', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        {['💰 Безплатно', '💻 IT', '🏥 Медицина', '🎓 Стипендии'].map(q => (
+        {['💰 Безплатно', '💻 IT', '🏥 Медицина', '🎓 Стипендии', '📅 Срокове', '🛂 Виза', '⚖️ Сравни'].map(q => (
           <button key={q} onClick={() => send(q.slice(2).trim())} style={{ padding: '3px 8px', borderRadius: 8, fontSize: 10, border: '1px solid #E7E5E4', background: '#FAFAF9', color: '#78716C' }}>{q}</button>
         ))}
       </div>
