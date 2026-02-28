@@ -2,9 +2,11 @@
   "name": "readmore-app",
   "version": "3.0.0",
   "private": true,
+  "type": "module",
   "description": "Read More — AI EdTech platform for Bulgarian students to find European universities",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"node server.mjs\" \"vite\"",
+    "dev:ui": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -16,6 +18,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
+    "concurrently": "^9.2.1",
     "vite": "^5.0.0"
   }
 }
