@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { universities, allFields, allCountries, fieldEmoji } from './data/universities';
 import { questions, RIASEC_MAP, dimEmoji, getArchetype, careerOutcomes } from './data/testData';
 import { Btn, Card, RadarChart, AnimBar } from './components/UI';
@@ -9,24 +9,80 @@ import CountryGuidesPage from './components/CountryGuides';
 import ApplicationTracker from './components/ApplicationTracker';
 import StudentReviews from './components/StudentReviews';
 import PeerChat from './components/PeerChat';
+import OnboardingWizard from './components/OnboardingWizard';
+import B2BPage from './components/B2BPage';
+import { useUser } from './UserContext';
 
 const cls = ["#2563EB", "#7C3AED", "#059669", "#EA580C", "#E11D48", "#0891B2"];
 
+// ─── Match Score Calculator ───────────────────
+function calcMatch(u, profile) {
+  if (!profile.onboarded) return null;
+  let score = 0, max = 0;
+  // Field overlap (30%)
+  if (profile.fields.length > 0) {
+    const overlap = u.fields.filter(f => profile.fields.includes(f)).length;
+    score += (overlap / Math.max(profile.fields.length, 1)) * 30;
+  } else score += 15;
+  max += 30;
+  // Budget fit (25%)
+  if (profile.budget > 0) {
+    const monthlyTotal = u.costOfLiving + (u.tuition[0] / 12);
+    score += monthlyTotal <= profile.budget ? 25 : monthlyTotal <= profile.budget * 1.3 ? 15 : 5;
+  } else score += 12;
+  max += 25;
+  // Language match (20%)
+  if (profile.langPref === 'en') score += u.international > 15 ? 20 : 10;
+  else if (profile.langPref === 'de') score += ['Германия','Австрия','Швейцария'].includes(u.country) ? 20 : 5;
+  else if (profile.langPref === 'fr') score += ['Франция','Швейцария','Белгия'].includes(u.country) ? 20 : 5;
+  else if (profile.langPref === 'local') score += u.tuition[0] === 0 ? 20 : 10;
+  else score += 10;
+  max += 20;
+  // Rank quality (15%)
+  score += u.rank <= 100 ? 15 : u.rank <= 300 ? 12 : u.rank <= 600 ? 8 : 4;
+  max += 15;
+  // Employability (10%)
+  score += (u.employability / 100) * 10;
+  max += 10;
+  return Math.round((score / max) * 100);
+}
+
 export default function App() {
+  const user = useUser();
+  const { profile } = user;
+
   const [pg, sP] = useState("home");
   const [sr, sR] = useState("");
   const [ft, sF] = useState({ c: "", f: "", s: "ranking", type: "", free: false });
   const [sf, sSf] = useState(false);
-  const [cm, sC] = useState([]);
   const [sl, sL] = useState(null);
   const [st, sSt] = useState(0);
   const [ans, sA] = useState({ R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 });
   const [dn, sD] = useState(false);
   const [cp, sCp] = useState(1);
-  const [fav, sFav] = useState([]);
   const [tab, sTab] = useState("info");
   const [chat, setChat] = useState(false);
   const [mapMode, setMap] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Sync favorites/compare from UserContext
+  const cm = profile.compared;
+  const fav = profile.favorites;
+  const tc = id => user.toggleCompare(id);
+  const tf = id => user.toggleFav(id);
+
+  // Show onboarding on first visit
+  useEffect(() => {
+    if (!profile.onboarded) setShowOnboarding(true);
+  }, []);
+
+  // Restore RIASEC state from profile
+  useEffect(() => {
+    if (profile.riasecDone && profile.riasecScores) {
+      sA(profile.riasecScores);
+      sD(true);
+    }
+  }, []);
 
   const ls = useMemo(() => {
     let l = [...universities];
@@ -35,7 +91,8 @@ export default function App() {
     if (ft.f) l = l.filter(u => u.fields.includes(ft.f));
     if (ft.type) l = l.filter(u => u.type === ft.type);
     if (ft.free) l = l.filter(u => u.tuition[0] === 0);
-    if (ft.s === "ranking") l.sort((a, b) => a.rank - b.rank);
+    if (ft.s === "match" && profile.onboarded) l.sort((a, b) => (calcMatch(b, profile) || 0) - (calcMatch(a, profile) || 0));
+    else if (ft.s === "ranking") l.sort((a, b) => a.rank - b.rank);
     else if (ft.s === "rating") l.sort((a, b) => b.rating - a.rating);
     else if (ft.s === "tuition") l.sort((a, b) => a.tuition[0] - b.tuition[0]);
     else if (ft.s === "emp") l.sort((a, b) => b.employability - a.employability);
@@ -45,8 +102,6 @@ export default function App() {
 
   const tp = Math.ceil(ls.length / 10);
   const sh = ls.slice((cp - 1) * 10, cp * 10);
-  const tc = id => sC(p => p.includes(id) ? p.filter(x => x !== id) : p.length < 4 ? [...p, id] : p);
-  const tf = id => sFav(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const getR = () => {
     const sorted = Object.entries(ans).sort((a, b) => b[1] - a[1]);
@@ -62,18 +117,32 @@ export default function App() {
 
   const answer = (val) => {
     const dim = questions[st].dim;
-    sA(p => ({ ...p, [dim]: p[dim] + val }));
-    if (st < questions.length - 1) sSt(st + 1); else sD(true);
+    const newAns = { ...ans, [dim]: ans[dim] + val };
+    sA(newAns);
+    if (st < questions.length - 1) sSt(st + 1);
+    else {
+      sD(true);
+      // Save to persistent profile
+      const sorted = Object.entries(newAns).sort((a, b) => b[1] - a[1]);
+      const top3 = sorted.slice(0, 3).map(([k]) => k);
+      const code = top3.join("");
+      const arch = getArchetype(top3.slice(0, 2));
+      user.saveRiasec(newAns, code, arch.name);
+    }
   };
 
   const nv = p => { sP(p); sL(null); sTab("info"); };
 
   const UniRow = ({ u }) => {
     const matchedProgs = sr ? u.programs.filter(p => p.toLowerCase().includes(sr.toLowerCase())) : [];
+    const matchScore = calcMatch(u, profile);
     return (
     <Card style={{ padding: "14px 16px", marginBottom: 8, cursor: "pointer", display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 12, alignItems: "center" }}
       onClick={() => { sL(u); if (pg !== "browse") nv("browse"); sTab("info"); }}>
-      <div style={{ width: 42, height: 42, borderRadius: 11, background: "#F5F5F4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{u.emoji}</div>
+      <div style={{ position: "relative" }}>
+        <div style={{ width: 42, height: 42, borderRadius: 11, background: "#F5F5F4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{u.emoji}</div>
+        {matchScore !== null && <div style={{ position: "absolute", bottom: -4, right: -4, width: 22, height: 22, borderRadius: "50%", background: matchScore >= 75 ? "#059669" : matchScore >= 50 ? "#F59E0B" : "#A8A29E", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, border: "2px solid white" }}>{matchScore}</div>}
+      </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</div>
         <div style={{ display: "flex", gap: 8, fontSize: 11, color: "#78716C", flexWrap: "wrap" }}>
@@ -94,15 +163,20 @@ export default function App() {
     </Card>
   ); };
 
+  // Onboarding gate
+  if (showOnboarding && !profile.onboarded) {
+    return <OnboardingWizard onFinish={() => setShowOnboarding(false)} />;
+  }
+
   return (
     <div style={{ minHeight: "100vh" }}>
       {/* NAV */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(250,250,249,0.92)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid #E7E5E4", padding: "0 20px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
-          <div onClick={() => nv("home")} style={{ fontFamily: "'Playfair Display',serif", fontSize: 19, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>📖 <span className="grad-text">Read More</span></div>
-          <div style={{ display: "flex", gap: 2 }}>
-            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
-              <button key={k} onClick={() => nv(k)} style={{ padding: "6px 10px", borderRadius: 8, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#2563EB" : "#78716C", background: pg === k ? "#EFF6FF" : "transparent", border: "none" }}>{icon}</button>
+          <div onClick={() => nv("home")} style={{ fontFamily: "'Playfair Display',serif", fontSize: 19, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>📖 <span className="grad-text">Find The Uni</span></div>
+          <div style={{ display: "flex", gap: 2, overflowX: "auto" }}>
+            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"], ["b2b", "🏫"]].map(([k, icon]) =>
+              <button key={k} onClick={() => nv(k)} style={{ padding: "6px 10px", borderRadius: 8, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#2563EB" : "#78716C", background: pg === k ? "#EFF6FF" : "transparent", border: "none", flexShrink: 0 }}>{icon}</button>
             )}
           </div>
         </div>
@@ -113,11 +187,17 @@ export default function App() {
         {/* ═══ HOME ═══ */}
         {pg === "home" && <div className="page-enter">
           <div style={{ textAlign: "center", padding: "56px 0 40px" }}>
-            <div style={{ display: "inline-flex", padding: "4px 12px", background: "#EFF6FF", color: "#2563EB", borderRadius: 14, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>✨ v5 — Archetypes + Career Outcomes + Reviews + Peer Chat</div>
+            <div style={{ display: "inline-flex", padding: "4px 12px", background: "#EFF6FF", color: "#2563EB", borderRadius: 14, fontSize: 11, fontWeight: 600, marginBottom: 16 }}>✨ v6 — Onboarding + Match Score + Profiles + B2B</div>
             <h1 style={{ fontFamily: "'Playfair Display',serif", fontSize: "clamp(28px,5vw,44px)", fontWeight: 700, lineHeight: 1.15, marginBottom: 12 }}>Открий <span className="grad-text">перфектния университет</span></h1>
-            <p style={{ fontSize: 15, color: "#78716C", maxWidth: 480, margin: "0 auto 22px", lineHeight: 1.6 }}>70 университета от 20+ държави. RIASEC AI тест. Стипендии. Интерактивна карта. AI съветник.</p>
+            <p style={{ fontSize: 15, color: "#78716C", maxWidth: 480, margin: "0 auto 22px", lineHeight: 1.6 }}>
+              {profile.onboarded && profile.riasecDone
+                ? `${profile.archetype ? `🏆 ${profile.archetype}` : ''} · ${profile.fields.slice(0,2).join(', ') || 'Всички области'} · €${profile.budget}/мес — твоите match-ове те чакат!`
+                : '70 университета от 20+ държави. AI тест, стипендии, карта, съветник. Всичко на български.'}
+            </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-              <Btn primary onClick={() => nv("test")}>🧠 RIASEC тест</Btn>
+              {!profile.riasecDone
+                ? <Btn primary onClick={() => nv("test")}>🚀 Започни за 60 секунди</Btn>
+                : <Btn primary onClick={() => nv("dash")}>📋 Моето табло</Btn>}
               <Btn onClick={() => nv("browse")}>🎓 Университети</Btn>
               <Btn accent onClick={() => setChat(true)}>🤖 AI Съветник</Btn>
             </div>
@@ -254,6 +334,17 @@ export default function App() {
               <div onClick={() => tf(sl.id)} style={{ fontSize: 22, cursor: "pointer" }}>{fav.includes(sl.id) ? "❤️" : "🤍"}</div>
             </div>
 
+            {/* Match score banner */}
+            {(() => { const ms = calcMatch(sl, profile); return ms !== null && (
+              <Card style={{ marginBottom: 14, background: ms >= 75 ? '#ECFDF5' : ms >= 50 ? '#FFFBEB' : '#F5F5F4', border: 'none', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: ms >= 75 ? '#059669' : ms >= 50 ? '#F59E0B' : '#A8A29E', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>{ms}%</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: ms >= 75 ? '#059669' : ms >= 50 ? '#92400E' : '#78716C' }}>{ms >= 75 ? '🎯 Отлично съвпадение!' : ms >= 50 ? '👍 Добро съвпадение' : '🔍 Частично съвпадение'}</div>
+                  <div style={{ fontSize: 10, color: '#A8A29E' }}>Базирано на твоя профил: {profile.fields.slice(0, 2).join(', ') || '—'} · €{profile.budget}/мес</div>
+                </div>
+              </Card>
+            ); })()}
+
             <div style={{ display: "flex", gap: 4, marginBottom: 16, borderBottom: "1px solid #E7E5E4", paddingBottom: 8 }}>
               {[["info", "📋 Инфо"], ["prg", "🎓 Програми"], ["cost", "💰 Разходи"]].map(([k, l]) =>
                 <button key={k} onClick={() => sTab(k)} style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: tab === k ? 600 : 500, color: tab === k ? "#2563EB" : "#78716C", background: tab === k ? "#EFF6FF" : "transparent", border: "none" }}>{l}</button>
@@ -283,7 +374,8 @@ export default function App() {
               </div>)}
             </Card>}
 
-            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+              <Btn primary onClick={() => { user.addApplication({ uniId: sl.id, uni: sl.nameEn, country: sl.country, program: sl.programs[0] || 'General', emoji: sl.emoji }); nv("tracker"); }}>📤 Кандидатствай</Btn>
               <Btn accent onClick={() => tc(sl.id)} sm>{cm.includes(sl.id) ? "✓ В сравнението" : "📊 Сравни"}</Btn>
               <Btn onClick={() => tf(sl.id)} sm>{fav.includes(sl.id) ? "❤️ В любими" : "🤍 Запази"}</Btn>
             </div>
@@ -317,7 +409,7 @@ export default function App() {
                 <select value={ft[k]} onChange={e => { sF({ ...ft, [k]: e.target.value }); sCp(1) }} style={{ width: "100%", padding: "6px", border: "1px solid #E7E5E4", borderRadius: 5, fontFamily: "inherit", fontSize: 11, background: "#FAFAF9" }}><option value="">Всички</option>{ops.map(o => <option key={o}>{o}</option>)}</select></div>)}
               <div><div style={{ fontSize: 9, fontWeight: 600, color: "#78716C", textTransform: "uppercase", marginBottom: 3 }}>Сортиране</div>
                 <select value={ft.s} onChange={e => sF({ ...ft, s: e.target.value })} style={{ width: "100%", padding: "6px", border: "1px solid #E7E5E4", borderRadius: 5, fontFamily: "inherit", fontSize: 11, background: "#FAFAF9" }}>
-                  <option value="ranking">Класиране</option><option value="rating">Рейтинг</option><option value="tuition">Такса ↑</option><option value="emp">Заетост ↓</option><option value="col">Разходи ↑</option></select></div>
+                  <option value="ranking">Класиране</option>{profile.onboarded && <option value="match">🎯 Match %</option>}<option value="rating">Рейтинг</option><option value="tuition">Такса ↑</option><option value="emp">Заетост ↓</option><option value="col">Разходи ↑</option></select></div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, paddingTop: 14 }}>
                 <input type="checkbox" checked={ft.free} onChange={e => { sF({ ...ft, free: e.target.checked }); sCp(1) }} />
                 <span style={{ fontSize: 11, fontWeight: 500 }}>Безплатно</span></div>
@@ -343,6 +435,9 @@ export default function App() {
 
         {/* ═══ PEER CHAT ═══ */}
         {pg === "peers" && <PeerChat />}
+
+        {/* ═══ B2B ═══ */}
+        {pg === "b2b" && <B2BPage />}
 
         {/* ═══ COMPARE ═══ */}
         {pg === "compare" && <div style={{ padding: "32px 0" }} className="page-enter">
@@ -446,7 +541,8 @@ export default function App() {
       <AIChatbot isOpen={chat} onClose={() => setChat(false)} />
 
       <div style={{ borderTop: "1px solid #E7E5E4", padding: "20px", textAlign: "center", color: "#A8A29E", fontSize: 10 }}>
-        📖 Find The Uni v5 © 2026 · Archetypes + Career Data + Reviews + Peer Chat + PWA
+        📖 Find The Uni v6 © 2026 · AI Matching + Profiles + Onboarding + B2B
+        {!profile.onboarded && <span style={{ marginLeft: 8 }}><button onClick={() => setShowOnboarding(true)} style={{ fontSize: 10, color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}>Настрой профила си →</button></span>}
       </div>
     </div>
   );
