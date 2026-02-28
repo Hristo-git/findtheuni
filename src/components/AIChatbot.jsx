@@ -1,6 +1,62 @@
 import React, { useState, useRef, useEffect } from 'react';
+import Anthropic from '@anthropic-ai/sdk';
 import { chatPatterns } from '../data/chatData';
 import { universities, fieldEmoji } from '../data/universities';
+
+// Browser-direct Claude call (key embedded at build time via VITE_ANTHROPIC_API_KEY)
+const BROWSER_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
+const anthropic = BROWSER_KEY
+  ? new Anthropic({ apiKey: BROWSER_KEY, dangerouslyAllowBrowser: true })
+  : null;
+
+const AI_SYSTEM = `Ти си AI съветник "Find The Uni" — платформа помагаща на български ученици да намерят университет в Европа. Отговаряй САМО НА БЪЛГАРСКИ. Бъди конкретен и сбит (max 160 думи). Използвай emoji умерено.
+
+БАЗА ДАННИ — ${universities.length} УНИВЕРСИТЕТА:
+${universities.map(u => `${u.emoji} ${u.nameEn} | ${u.country}, ${u.city} | #${u.rank} | Такса:€${u.tuition[0]}–${u.tuition[1]}/год | Живот:€${u.costOfLiving}/мес | Рейтинг:${u.rating}/5 | Прием:${u.acceptance}% | Заетост:${u.employability}% | ${u.fields.slice(0, 3).join('/')} | ${u.programs.slice(0, 3).join(', ')}`).join('\n')}
+
+КЛЮЧОВИ ФАКТИ:
+• Безплатно: Германия (€0+€300/сем), Норвегия (напълно), Финландия (EU), Чехия/Полша (местен език), Гърция/Австрия (EU €0–1500)
+• Виза: EU граждани → без виза в EU. UK → Student visa £363+£1334/год. Швейцария → разрешение СЛЕД пристигане.
+• Работа: Германия/UK/Австрия 20ч/сед; Скандинавия/Чехия/Полша без ограничение за EU; Швейцария 15ч/сед след 6 мес.
+• Сертификати: IELTS 6.5+/TOEFL 90+ за англ.; Goethe B2/TestDaF за нем.; DELF B2 за фр.
+• Нострификация: ДЗИ е призната автоматично в EU по Болонски процес.
+• Срокове: UK-UCAS 15 яну; Германия 1–15 юли; Нидерландия 1 май; Швеция 15 яну; Норвегия 15 апр; ETH/EPFL 30 апр; Финландия 20 яну; Ирландия 1 фев
+• Стипендии: Erasmus+ €800–1200/мес; DAAD €934/мес; Chevening (UK пълна); SI Scholarship (SE); Eiffel €1181/мес (FR)`;
+
+async function getAIReply(userMsg, history) {
+  const messages = [
+    ...history.slice(-8).map(m => ({ role: m.from === 'user' ? 'user' : 'assistant', content: m.text })),
+    { role: 'user', content: userMsg },
+  ];
+
+  // 1. Browser-direct (no server needed — for Netlify/static hosting)
+  if (anthropic) {
+    const resp = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 450,
+      system: AI_SYSTEM,
+      messages,
+    });
+    return resp.content[0].text;
+  }
+
+  // 2. /api/chat (Vercel serverless deployment)
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 9000);
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: userMsg, history }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(timeout);
+    if (r.ok) return (await r.json()).reply;
+  } catch { clearTimeout(timeout); }
+
+  // 3. Local pattern matching fallback
+  return getReply(userMsg, history);
+}
 
 const tuitionStr = u => u.tuition[0] === 0 && u.tuition[1] === 0 ? '🎉 Безплатно' : `€${u.tuition[0]}–${u.tuition[1]}/год`;
 
@@ -426,25 +482,10 @@ export default function AIChatbot({ isOpen, onClose }) {
     setMsgs(prev => {
       const next = [...prev, { from: 'user', text: userMsg }];
       setTyping(true);
-
-      const ctrl = new AbortController();
-      const timeout = setTimeout(() => ctrl.abort(), 9000);
-
-      fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg, history: next }),
-        signal: ctrl.signal,
-      })
-        .then(r => { clearTimeout(timeout); return r.ok ? r.json() : Promise.reject(); })
-        .then(data => setMsgs(p => [...p, { from: 'ai', text: data.reply }]))
-        .catch(() => {
-          // Fallback to local pattern matching when API is unavailable
-          const reply = getReply(userMsg, next);
-          setMsgs(p => [...p, { from: 'ai', text: reply }]);
-        })
+      getAIReply(userMsg, next)
+        .then(reply => setMsgs(p => [...p, { from: 'ai', text: reply }]))
+        .catch(() => setMsgs(p => [...p, { from: 'ai', text: getReply(userMsg, next) }]))
         .finally(() => setTyping(false));
-
       return next;
     });
   };
