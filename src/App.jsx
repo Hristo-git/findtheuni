@@ -57,6 +57,14 @@ export default function App() {
   const [chat, setChat] = useState(false);
   const [mapMode, setMap] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const cm = profile.compared;
   const fav = profile.favorites;
@@ -149,25 +157,63 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0A0A0B" }}>
-      {/* GLASSMORPHISM NAV */}
+      {/* TOP NAV */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,11,0.8)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 20px" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 62 }}>
           <div onClick={() => nv("home")} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 32, height: 32, borderRadius: 10, background: "#CCFF00", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🎓</span>
             <span className="grad-text">FindTheUni</span>
           </div>
-          <div style={{ display: "flex", gap: 1, overflowX: "auto", padding: "4px 0" }}>
-            {[["home", "🏠", "Начало"], ["test", "🧠", "Тест"], ["browse", "🎓", "Универс."], ["guides", "🌍", "Гайдове"], ["scholarships", "🎯", "Стипенд."], ["tracker", "📝", "Tracker"], ["reviews", "🌟", "Отзиви"], ["peers", "💬", "Peers"], ["compare", "📊", "Сравни"], ["dash", "📋", "Табло"]].map(([k, icon, label]) =>
-              <button key={k} onClick={() => nv(k)} style={{ padding: "5px 9px", borderRadius: 9, border: "none", background: pg === k ? "rgba(204,255,0,0.1)" : "transparent", color: pg === k ? "#CCFF00" : "#71717A", display: "flex", flexDirection: "column", alignItems: "center", gap: 1, cursor: "pointer", flexShrink: 0 }}>
-                <span style={{ fontSize: 20 }}>{icon}</span>
-                <span style={{ fontSize: 10, fontWeight: pg === k ? 700 : 400 }}>{label}</span>
-              </button>
-            )}
-          </div>
+          {/* Desktop nav — hidden on mobile */}
+          {!isMobile && (
+            <div style={{ display: "flex", gap: 1 }}>
+              {[["home", "🏠", "Начало"], ["test", "🧠", "Тест"], ["browse", "🎓", "Универс."], ["guides", "🌍", "Гайдове"], ["scholarships", "🎯", "Стипенд."], ["tracker", "📝", "Tracker"], ["reviews", "🌟", "Отзиви"], ["peers", "💬", "Peers"], ["compare", "📊", "Сравни"], ["dash", "📋", "Табло"]].map(([k, icon, label]) =>
+                <button key={k} onClick={() => nv(k)} style={{ padding: "5px 9px", borderRadius: 9, border: "none", background: pg === k ? "rgba(204,255,0,0.1)" : "transparent", color: pg === k ? "#CCFF00" : "#71717A", display: "flex", flexDirection: "column", alignItems: "center", gap: 1, cursor: "pointer" }}>
+                  <span style={{ fontSize: 18 }}>{icon}</span>
+                  <span style={{ fontSize: 9, fontWeight: pg === k ? 700 : 400 }}>{label}</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", paddingBottom: 80 }}>
+      {/* MOBILE BOTTOM TAB BAR */}
+      {isMobile && (
+        <>
+          {/* Backdrop for More drawer */}
+          {showMore && <div onClick={() => setShowMore(false)} style={{ position: "fixed", inset: 0, zIndex: 149, background: "rgba(0,0,0,0.5)" }} />}
+
+          {/* More drawer */}
+          {showMore && (
+            <div style={{ position: "fixed", bottom: 60, left: 0, right: 0, zIndex: 150, background: "#161618", borderTop: "1px solid rgba(255,255,255,0.1)", borderRadius: "20px 20px 0 0", padding: "16px 12px 8px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              {[["guides", "🌍", "Гайдове"], ["tracker", "📝", "Tracker"], ["reviews", "🌟", "Отзиви"], ["peers", "💬", "Peers"], ["compare", "📊", "Сравни"]].map(([k, icon, label]) =>
+                <button key={k} onClick={() => { nv(k); setShowMore(false); }} style={{ padding: "10px 4px", borderRadius: 12, border: "none", background: pg === k ? "rgba(204,255,0,0.1)" : "rgba(255,255,255,0.05)", color: pg === k ? "#CCFF00" : "#A1A1AA", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                  <span style={{ fontSize: 22 }}>{icon}</span>
+                  <span style={{ fontSize: 10, fontWeight: pg === k ? 700 : 400 }}>{label}</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Bottom tab bar */}
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 150, background: "rgba(10,10,11,0.95)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", height: 60, paddingBottom: "env(safe-area-inset-bottom)" }}>
+            {[["home", "🏠", "Начало"], ["test", "🧠", "Тест"], ["browse", "🎓", "Преглед"], ["scholarships", "🎯", "Стипенд."], ["dash", "📋", "Табло"]].map(([k, icon, label]) =>
+              <button key={k} onClick={() => { nv(k); setShowMore(false); }} style={{ flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, color: pg === k ? "#CCFF00" : "#71717A", cursor: "pointer", position: "relative" }}>
+                {pg === k && <div style={{ position: "absolute", top: 0, left: "25%", right: "25%", height: 2, background: "#CCFF00", borderRadius: "0 0 4px 4px" }} />}
+                <span style={{ fontSize: 22 }}>{icon}</span>
+                <span style={{ fontSize: 9, fontWeight: pg === k ? 700 : 400 }}>{label}</span>
+              </button>
+            )}
+            <button onClick={() => setShowMore(v => !v)} style={{ flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, color: showMore ? "#CCFF00" : "#71717A", cursor: "pointer" }}>
+              <span style={{ fontSize: 22 }}>≡</span>
+              <span style={{ fontSize: 9 }}>Още</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", paddingBottom: isMobile ? 90 : 80 }}>
 
         {/* HOME */}
         {pg === "home" && <div className="page-enter">
@@ -472,13 +518,13 @@ export default function App() {
       </div>
 
       {/* Floating compare */}
-      {cm.length > 0 && pg !== "compare" && <div style={{ position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)", background: "#161618", color: "white", padding: "10px 24px", borderRadius: 100, display: "flex", alignItems: "center", gap: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 99, border: "1px solid rgba(255,255,255,0.1)" }}>
+      {cm.length > 0 && pg !== "compare" && <div style={{ position: "fixed", bottom: isMobile ? 74 : 16, left: "50%", transform: "translateX(-50%)", background: "#161618", color: "white", padding: "10px 24px", borderRadius: 100, display: "flex", alignItems: "center", gap: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 120, border: "1px solid rgba(255,255,255,0.1)" }}>
         <span style={{ background: "#5D5FEF", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700 }}>{cm.length}</span>
         <span style={{ fontSize: 12, color: "#A1A1AA" }}>за сравнение</span>
         <Btn primary sm onClick={() => nv("compare")}>Сравни →</Btn>
       </div>}
 
-      {!chat && <div onClick={() => setChat(true)} style={{ position: "fixed", bottom: cm.length > 0 ? 70 : 18, right: 18, width: 56, height: 56, borderRadius: 18, background: "linear-gradient(135deg,#5D5FEF,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 20px rgba(93,95,239,0.4)", zIndex: 98, animation: "pulse 2s ease-in-out infinite", fontSize: 24 }}>🤖</div>}
+      {!chat && <div onClick={() => setChat(true)} style={{ position: "fixed", bottom: isMobile ? (cm.length > 0 ? 130 : 74) : (cm.length > 0 ? 70 : 18), right: 18, width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg,#5D5FEF,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 20px rgba(93,95,239,0.4)", zIndex: 119, animation: "pulse 2s ease-in-out infinite", fontSize: 22 }}>🤖</div>}
 
       <AIChatbot
         isOpen={chat}
