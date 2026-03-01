@@ -61,7 +61,7 @@ export default function EuropeMap({ onSelectUni, filters }) {
 
       <ComposableMap
         projection="geoMercator"
-        projectionConfig={{ center: [15, 54], scale: 860 }}
+        projectionConfig={{ center: [9, 52], scale: 840 }}
         style={{ width: '100%', height: 440, display: 'block' }}
       >
         <Geographies geography={GEO_URL}>
