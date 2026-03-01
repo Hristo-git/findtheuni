@@ -67,21 +67,21 @@ export default function App() {
   const nv = p => { sP(p); sL(null); sTab("info"); };
 
   const UniRow = ({ u }) => (
-    <Card style={{ padding: "14px 16px", marginBottom: 8, cursor: "pointer", display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 12, alignItems: "center" }}
+    <Card style={{ padding: "16px 18px", marginBottom: 10, cursor: "pointer", display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center" }}
       onClick={() => { sL(u); if (pg !== "browse") nv("browse"); sTab("info"); }}>
-      <div style={{ width: 42, height: 42, borderRadius: 11, background: "#F5F5F4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{u.emoji}</div>
+      <div style={{ width: 48, height: 48, borderRadius: 12, background: "#F5F5F4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{u.emoji}</div>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</div>
-        <div style={{ display: "flex", gap: 8, fontSize: 11, color: "#78716C", flexWrap: "wrap" }}>
+        <div style={{ fontSize: 15, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</div>
+        <div style={{ display: "flex", gap: 10, fontSize: 13, color: "#78716C", flexWrap: "wrap", marginTop: 2 }}>
           <span>📍{u.city}, {u.country}</span><span>🏆#{u.rank}</span>
           <span>💰{u.tuition[0] === 0 && u.tuition[1] === 0 ? "Безпл." : `€${u.tuition[0]}–${u.tuition[1]}`}</span>
           {u.employability && <span>👔{u.employability}%</span>}
         </div>
       </div>
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "#EA580C" }}>⭐{u.rating}</span>
-        <div onClick={e => { e.stopPropagation(); tf(u.id) }} style={{ fontSize: 16, cursor: "pointer" }}>{fav.includes(u.id) ? "❤️" : "🤍"}</div>
-        <div onClick={e => { e.stopPropagation(); tc(u.id) }} style={{ width: 20, height: 20, border: cm.includes(u.id) ? "none" : "2px solid #D6D3D1", borderRadius: 5, background: cm.includes(u.id) ? "#2563EB" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>{cm.includes(u.id) ? "✓" : ""}</div>
+      <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#EA580C" }}>⭐{u.rating}</span>
+        <div onClick={e => { e.stopPropagation(); tf(u.id) }} style={{ fontSize: 18, cursor: "pointer" }}>{fav.includes(u.id) ? "❤️" : "🤍"}</div>
+        <div onClick={e => { e.stopPropagation(); tc(u.id) }} style={{ width: 22, height: 22, border: cm.includes(u.id) ? "none" : "2px solid #D6D3D1", borderRadius: 6, background: cm.includes(u.id) ? "#2563EB" : "white", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{cm.includes(u.id) ? "✓" : ""}</div>
       </div>
     </Card>
   );
@@ -90,11 +90,14 @@ export default function App() {
     <div style={{ minHeight: "100vh" }}>
       {/* NAV */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(250,250,249,0.92)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid #E7E5E4", padding: "0 20px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
-          <div onClick={() => nv("home")} style={{ fontFamily: "'Playfair Display',serif", fontSize: 19, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>📖 <span className="grad-text">Read More</span></div>
-          <div style={{ display: "flex", gap: 2 }}>
-            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
-              <button key={k} onClick={() => nv(k)} style={{ padding: "6px 10px", borderRadius: 8, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#2563EB" : "#78716C", background: pg === k ? "#EFF6FF" : "transparent", border: "none" }}>{icon}</button>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 62 }}>
+          <div onClick={() => nv("home")} style={{ fontFamily: "'Playfair Display',serif", fontSize: 21, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>📖 <span className="grad-text">Read More</span></div>
+          <div style={{ display: "flex", gap: 1 }}>
+            {[["home", "🏠", "Начало"], ["test", "🧠", "Тест"], ["browse", "🎓", "Универс."], ["guides", "🌍", "Гайдове"], ["scholarships", "🎯", "Стипенд."], ["tracker", "📝", "Tracker"], ["compare", "📊", "Сравни"], ["dash", "📋", "Табло"]].map(([k, icon, label]) =>
+              <button key={k} onClick={() => nv(k)} style={{ padding: "5px 9px", borderRadius: 9, border: "none", background: pg === k ? "#EFF6FF" : "transparent", color: pg === k ? "#2563EB" : "#78716C", display: "flex", flexDirection: "column", alignItems: "center", gap: 1, cursor: "pointer" }}>
+                <span style={{ fontSize: 20 }}>{icon}</span>
+                <span style={{ fontSize: 10, fontWeight: pg === k ? 700 : 400 }}>{label}</span>
+              </button>
             )}
           </div>
         </div>
