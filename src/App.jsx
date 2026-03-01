@@ -363,7 +363,14 @@ export default function App() {
       {/* AI CHATBOT BUTTON */}
       {!chat && <div onClick={() => setChat(true)} style={{ position: "fixed", bottom: cm.length > 0 ? 64 : 16, right: 16, width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg,#2563EB,#7C3AED)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 16px rgba(37,99,235,0.3)", zIndex: 98, animation: "pulse 2s ease-in-out infinite", fontSize: 22 }}>🤖</div>}
 
-      <AIChatbot isOpen={chat} onClose={() => setChat(false)} />
+      <AIChatbot
+        isOpen={chat}
+        onClose={() => setChat(false)}
+        currentPage={pg}
+        selectedUni={sl}
+        activeFilters={ft}
+        testResults={dn ? { code: getR().code, fields: getR().fields } : null}
+      />
 
       <div style={{ borderTop: "1px solid #E7E5E4", padding: "20px", textAlign: "center", color: "#A8A29E", fontSize: 10 }}>
         📖 Find The Uni v4 © 2026 · Country Guides + Tracker + AI + RIASEC
