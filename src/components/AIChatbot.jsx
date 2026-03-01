@@ -23,7 +23,24 @@ ${universities.map(u => `${u.emoji} ${u.nameEn} | ${u.country}, ${u.city} | #${u
 • Срокове: UK-UCAS 15 яну; Германия 1–15 юли; Нидерландия 1 май; Швеция 15 яну; Норвегия 15 апр; ETH/EPFL 30 апр; Финландия 20 яну; Ирландия 1 фев
 • Стипендии: Erasmus+ €800–1200/мес; DAAD €934/мес; Chevening (UK пълна); SI Scholarship (SE); Eiffel €1181/мес (FR)`;
 
-async function getAIReply(userMsg, history) {
+function buildContextStr({ currentPage, selectedUni, activeFilters, testResults } = {}) {
+  const pageNames = { home: 'начална страница', test: 'RIASEC тест', browse: 'преглед на университети', guides: 'гайдове по държави', scholarships: 'стипендии', tracker: 'Application Tracker', compare: 'сравнение', dash: 'лично табло' };
+  const parts = [];
+  if (currentPage) parts.push(`Страница: ${pageNames[currentPage] || currentPage}`);
+  if (selectedUni) parts.push(`Разглежда университет: ${selectedUni.name} (${selectedUni.nameEn}), ${selectedUni.city}, ${selectedUni.country}, #${selectedUni.rank}, €${selectedUni.tuition[0]}–${selectedUni.tuition[1]}/год., живот €${selectedUni.costOfLiving}/мес`);
+  if (activeFilters?.c || activeFilters?.f || activeFilters?.free) {
+    const f = [];
+    if (activeFilters.c) f.push(`държава: ${activeFilters.c}`);
+    if (activeFilters.f) f.push(`специалност: ${activeFilters.f}`);
+    if (activeFilters.free) f.push('безплатно');
+    parts.push(`Активни филтри: ${f.join(', ')}`);
+  }
+  if (testResults) parts.push(`RIASEC тест: Holland Code ${testResults.code}, топ области: ${testResults.fields.slice(0, 5).join(', ')}`);
+  return parts.length ? '\n\nКОНТЕКСТ НА ПОТРЕБИТЕЛЯ (използвай за по-релевантни отговори):\n' + parts.map(p => `• ${p}`).join('\n') : '';
+}
+
+async function getAIReply(userMsg, history, ctx = {}) {
+  const system = AI_SYSTEM + buildContextStr(ctx);
   const messages = [
     ...history.slice(-8).map(m => ({ role: m.from === 'user' ? 'user' : 'assistant', content: m.text })),
     { role: 'user', content: userMsg },
@@ -34,7 +51,7 @@ async function getAIReply(userMsg, history) {
     const resp = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 450,
-      system: AI_SYSTEM,
+      system,
       messages,
     });
     return resp.content[0].text;
@@ -47,7 +64,7 @@ async function getAIReply(userMsg, history) {
     const r = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userMsg, history }),
+      body: JSON.stringify({ message: userMsg, history, context: buildContextStr(ctx) }),
       signal: ctrl.signal,
     });
     clearTimeout(timeout);
@@ -463,26 +480,32 @@ function formatMsg(text) {
   });
 }
 
-export default function AIChatbot({ isOpen, onClose }) {
+export default function AIChatbot({ isOpen, onClose, currentPage, selectedUni, activeFilters, testResults }) {
   const [msgs, setMsgs] = useState([
     { from: 'ai', text: "Здравей! 👋 Аз съм AI съветникът на Read More. Питай ме за университети, стипендии, програми или страни. Как мога да помогна?" }
   ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
+  const [selChips, setSelChips] = useState([]);
   const endRef = useRef(null);
   const inputRef = useRef(null);
+  const ctx = { currentPage, selectedUni, activeFilters, testResults };
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
   useEffect(() => { if (isOpen) inputRef.current?.focus(); }, [isOpen]);
 
-  const send = (overrideMsg) => {
-    const userMsg = (overrideMsg || input).trim();
+  const send = () => {
+    const parts = [];
+    if (input.trim()) parts.push(input.trim());
+    selChips.forEach(c => parts.push(c));
+    const userMsg = parts.join(' + ').trim();
     if (!userMsg) return;
     setInput('');
+    setSelChips([]);
     setMsgs(prev => {
       const next = [...prev, { from: 'user', text: userMsg }];
       setTyping(true);
-      getAIReply(userMsg, next)
+      getAIReply(userMsg, next, ctx)
         .then(reply => setMsgs(p => [...p, { from: 'ai', text: reply }]))
         .catch(() => setMsgs(p => [...p, { from: 'ai', text: getReply(userMsg, next) }]))
         .finally(() => setTyping(false));
@@ -514,7 +537,15 @@ export default function AIChatbot({ isOpen, onClose }) {
           <span style={{ fontSize: 20 }}>🤖</span>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif", color: '#FFFFFF' }}>AI Съветник</div>
-            <div style={{ fontSize: 10, opacity: 0.8, color: 'rgba(255,255,255,0.7)' }}>Read More Assistant</div>
+            {selectedUni ? (
+              <div style={{ fontSize: 10, opacity: 0.9, color: 'rgba(255,255,255,0.7)' }}>📌 {selectedUni.nameEn}</div>
+            ) : testResults ? (
+              <div style={{ fontSize: 10, opacity: 0.9, color: 'rgba(255,255,255,0.7)' }}>🧬 Holland Code: {testResults.code}</div>
+            ) : (activeFilters?.c || activeFilters?.f) ? (
+              <div style={{ fontSize: 10, opacity: 0.9, color: 'rgba(255,255,255,0.7)' }}>🔍 {[activeFilters.c, activeFilters.f].filter(Boolean).join(' · ')}</div>
+            ) : (
+              <div style={{ fontSize: 10, opacity: 0.8, color: 'rgba(255,255,255,0.7)' }}>FindTheUni Assistant</div>
+            )}
           </div>
         </div>
         <button onClick={onClose} style={{
@@ -566,22 +597,23 @@ export default function AIChatbot({ isOpen, onClose }) {
         <div ref={endRef} />
       </div>
 
-      {/* Quick actions */}
+      {/* Quick actions — multi-select */}
       <div style={{
         padding: '6px 14px', display: 'flex', gap: 4, flexWrap: 'wrap',
         background: '#161618',
         borderTop: '1px solid rgba(255,255,255,0.08)',
       }}>
-        {['💰 Безплатно', '💻 IT', '🏥 Медицина', '🎓 Стипендии', '📅 Срокове', '🛂 Виза', '⚖️ Сравни'].map(q => (
-          <button key={q} onClick={() => send(q.slice(2).trim())} style={{
-            padding: '3px 10px', borderRadius: 100, fontSize: 10,
-            border: '1px solid rgba(255,255,255,0.1)',
-            background: 'rgba(255,255,255,0.05)',
-            color: '#A1A1AA',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}>{q}</button>
-        ))}
+        {['💰 Безплатно', '💻 IT', '🏥 Медицина', '🎓 Стипендии', '📅 Срокове', '🛂 Виза', '⚖️ Сравни'].map(q => {
+          const text = q.slice(2).trim();
+          const sel = selChips.includes(text);
+          return (
+            <button key={q}
+              onClick={() => setSelChips(prev => sel ? prev.filter(c => c !== text) : [...prev, text])}
+              style={{ padding: '3px 10px', borderRadius: 100, fontSize: 10, border: `1px solid ${sel ? '#CCFF00' : 'rgba(255,255,255,0.1)'}`, background: sel ? 'rgba(204,255,0,0.1)' : 'rgba(255,255,255,0.05)', color: sel ? '#CCFF00' : '#A1A1AA', fontWeight: sel ? 600 : 400, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+              {q}
+            </button>
+          );
+        })}
       </div>
 
       {/* Input */}
@@ -592,7 +624,8 @@ export default function AIChatbot({ isOpen, onClose }) {
         background: '#161618',
       }}>
         <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Попитай нещо..." style={{
+          placeholder={selChips.length > 0 ? '+ добави текст или натисни →' : 'Попитай нещо...'}
+          style={{
             flex: 1, padding: '8px 12px',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 10, fontSize: 13,
@@ -602,11 +635,11 @@ export default function AIChatbot({ isOpen, onClose }) {
           }} />
         <button onClick={send} style={{
           padding: '8px 14px', borderRadius: 100,
-          background: '#CCFF00', color: '#0A0A0B',
+          background: selChips.length > 0 ? '#CCFF00' : 'rgba(204,255,0,0.7)', color: '#0A0A0B',
           border: 'none', fontSize: 13, fontWeight: 600,
           fontFamily: "'Space Grotesk', sans-serif",
           cursor: 'pointer',
-          transition: 'opacity 0.2s ease',
+          transition: 'all 0.2s ease',
         }}>→</button>
       </div>
     </div>

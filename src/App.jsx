@@ -151,14 +151,17 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#0A0A0B" }}>
       {/* GLASSMORPHISM NAV */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,11,0.8)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 20px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 62 }}>
           <div onClick={() => nv("home")} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 32, height: 32, borderRadius: 10, background: "#CCFF00", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🎓</span>
             <span className="grad-text">FindTheUni</span>
           </div>
-          <div style={{ display: "flex", gap: 2, overflowX: "auto", padding: "4px 0" }}>
-            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
-              <button key={k} onClick={() => nv(k)} style={{ padding: "6px 12px", borderRadius: 100, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#CCFF00" : "#71717A", background: pg === k ? "rgba(204,255,0,0.1)" : "transparent", border: "none", flexShrink: 0 }}>{icon}</button>
+          <div style={{ display: "flex", gap: 1, overflowX: "auto", padding: "4px 0" }}>
+            {[["home", "🏠", "Начало"], ["test", "🧠", "Тест"], ["browse", "🎓", "Универс."], ["guides", "🌍", "Гайдове"], ["scholarships", "🎯", "Стипенд."], ["tracker", "📝", "Tracker"], ["reviews", "🌟", "Отзиви"], ["peers", "💬", "Peers"], ["compare", "📊", "Сравни"], ["dash", "📋", "Табло"]].map(([k, icon, label]) =>
+              <button key={k} onClick={() => nv(k)} style={{ padding: "5px 9px", borderRadius: 9, border: "none", background: pg === k ? "rgba(204,255,0,0.1)" : "transparent", color: pg === k ? "#CCFF00" : "#71717A", display: "flex", flexDirection: "column", alignItems: "center", gap: 1, cursor: "pointer", flexShrink: 0 }}>
+                <span style={{ fontSize: 20 }}>{icon}</span>
+                <span style={{ fontSize: 10, fontWeight: pg === k ? 700 : 400 }}>{label}</span>
+              </button>
             )}
           </div>
         </div>
@@ -477,7 +480,14 @@ export default function App() {
 
       {!chat && <div onClick={() => setChat(true)} style={{ position: "fixed", bottom: cm.length > 0 ? 70 : 18, right: 18, width: 56, height: 56, borderRadius: 18, background: "linear-gradient(135deg,#5D5FEF,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 20px rgba(93,95,239,0.4)", zIndex: 98, animation: "pulse 2s ease-in-out infinite", fontSize: 24 }}>🤖</div>}
 
-      <AIChatbot isOpen={chat} onClose={() => setChat(false)} />
+      <AIChatbot
+        isOpen={chat}
+        onClose={() => setChat(false)}
+        currentPage={pg}
+        selectedUni={sl}
+        activeFilters={ft}
+        testResults={dn ? { code: getR().code, fields: getR().fields } : null}
+      />
 
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "24px", textAlign: "center", color: "#71717A", fontSize: 11 }}>
         🎓 FindTheUni v7 © 2026 · <span style={{ color: "#CCFF00" }}>Glass & Neon Grid</span> · AI Matching
