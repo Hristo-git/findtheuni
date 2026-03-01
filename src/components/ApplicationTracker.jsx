@@ -26,12 +26,12 @@ const uniDeadlines = [
 
 // ─── Status colors/labels ─────────────────────
 const statusMap = {
-  idea:     { label: '💡 Идея', color: '#A8A29E', bg: '#F5F5F4' },
-  research: { label: '🔍 Проучване', color: '#2563EB', bg: '#EFF6FF' },
-  docs:     { label: '📄 Документи', color: '#EA580C', bg: '#FFF7ED' },
-  applied:  { label: '📤 Кандидатствах', color: '#7C3AED', bg: '#F5F3FF' },
-  accepted: { label: '✅ Приет', color: '#059669', bg: '#ECFDF5' },
-  rejected: { label: '❌ Отказ', color: '#E11D48', bg: '#FFF1F2' },
+  idea:     { label: '💡 Идея', color: '#71717A', bg: 'rgba(161,161,170,0.15)' },
+  research: { label: '🔍 Проучване', color: '#5D5FEF', bg: 'rgba(93,95,239,0.15)' },
+  docs:     { label: '📄 Документи', color: '#F59E0B', bg: 'rgba(234,88,12,0.15)' },
+  applied:  { label: '📤 Кандидатствах', color: '#5D5FEF', bg: 'rgba(124,58,237,0.15)' },
+  accepted: { label: '✅ Приет', color: '#22C55E', bg: 'rgba(34,197,94,0.15)' },
+  rejected: { label: '❌ Отказ', color: '#EF4444', bg: 'rgba(225,29,72,0.15)' },
 };
 
 const docChecklist = [
@@ -111,17 +111,17 @@ export default function ApplicationTracker() {
     <div style={{ padding: '32px 0' }} className="page-enter">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div>
-          <h2 style={{ fontFamily: "'Playfair Display',serif", fontSize: 24, fontWeight: 600 }}>📝 Application Tracker</h2>
-          <p style={{ color: '#78716C', fontSize: 13 }}>Следи кандидатурите, дедлайни и документи</p>
+          <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 24, fontWeight: 600, color: '#FFFFFF' }}>📝 Application Tracker</h2>
+          <p style={{ color: '#71717A', fontSize: 13 }}>Следи кандидатурите, дедлайни и документи</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #E7E5E4', paddingBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 8 }}>
         {[['tracker', '📋 Кандидатури'], ['calendar', '📅 Календар'], ['checklist', '✅ Документи']].map(([k, l]) =>
           <button key={k} onClick={() => setView(k)} style={{
-            padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: view === k ? 600 : 500,
-            color: view === k ? '#2563EB' : '#78716C', background: view === k ? '#EFF6FF' : 'transparent',
+            padding: '7px 14px', borderRadius: 100, fontSize: 12, fontWeight: view === k ? 600 : 500,
+            color: view === k ? '#CCFF00' : '#71717A', background: view === k ? 'rgba(204,255,0,0.1)' : 'transparent',
             border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'all .15s ease'
           }}>{l}</button>
         )}
@@ -132,8 +132,8 @@ export default function ApplicationTracker() {
         {apps.length === 0 && !adding ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 10, animation: 'float 3s ease-in-out infinite' }}>📝</div>
-            <h3 style={{ fontFamily: "'Playfair Display',serif", fontSize: 18, marginBottom: 6 }}>Започни да следиш кандидатурите си</h3>
-            <p style={{ color: '#78716C', fontSize: 12, marginBottom: 14, maxWidth: 360, margin: '0 auto 14px' }}>Добави университети, задай дедлайни и следи статуса на всяка кандидатура.</p>
+            <h3 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, marginBottom: 6, color: '#FFFFFF' }}>Започни да следиш кандидатурите си</h3>
+            <p style={{ color: '#71717A', fontSize: 12, marginBottom: 14, maxWidth: 360, margin: '0 auto 14px' }}>Добави университети, задай дедлайни и следи статуса на всяка кандидатура.</p>
             <Btn accent onClick={() => setAdding(true)}>➕ Добави кандидатура</Btn>
           </div>
         ) : (
@@ -143,17 +143,17 @@ export default function ApplicationTracker() {
             {/* Add form */}
             {adding && (
               <Card style={{ marginBottom: 14, animation: 'scaleIn .2s ease-out' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Нова кандидатура</div>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: '#FFFFFF' }}>Нова кандидатура</div>
                 <div style={{ display: 'grid', gap: 8 }}>
                   <select value={selUni} onChange={e => setSelUni(e.target.value)}
-                    style={{ padding: '8px', border: '1px solid #E7E5E4', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', background: 'white' }}>
+                    style={{ padding: '8px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', background: '#0A0A0B', color: '#A1A1AA' }}>
                     <option value="">Избери университет...</option>
                     {universities.sort((a, b) => a.rank - b.rank).map(u =>
                       <option key={u.id} value={u.id}>{u.emoji} {u.nameEn} — {u.city}, {u.country}</option>
                     )}
                   </select>
                   {selUni && <input value={selProg} onChange={e => setSelProg(e.target.value)} placeholder="Програма (незадължително)"
-                    style={{ padding: '8px', border: '1px solid #E7E5E4', borderRadius: 6, fontSize: 12, fontFamily: 'inherit' }} />}
+                    style={{ padding: '8px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, fontSize: 12, fontFamily: 'inherit', background: '#0A0A0B', color: '#A1A1AA' }} />}
                   <div style={{ display: 'flex', gap: 6 }}>
                     <Btn accent onClick={addApp} sm>✓ Добави</Btn>
                     <Btn onClick={() => { setAdding(false); setSelUni(''); }} sm>Отказ</Btn>
@@ -171,32 +171,32 @@ export default function ApplicationTracker() {
                   <div onClick={() => setExpanded(isExp ? null : app.id)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 22 }}>{app.emoji}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{app.uni}</div>
-                      <div style={{ fontSize: 11, color: '#78716C' }}>{app.program} · {app.country}</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#FFFFFF' }}>{app.uni}</div>
+                      <div style={{ fontSize: 11, color: '#71717A' }}>{app.program} · {app.country}</div>
                     </div>
-                    <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 600, color: st.color, background: st.bg }}>{st.label}</span>
-                    <span style={{ color: '#A8A29E', fontSize: 12, transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
+                    <span style={{ padding: '3px 10px', borderRadius: 100, fontSize: 10, fontWeight: 600, color: st.color, background: st.bg }}>{st.label}</span>
+                    <span style={{ color: '#71717A', fontSize: 12, transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }}>▼</span>
                   </div>
                   {isExp && (
-                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #E7E5E4', animation: 'fadeIn .2s ease-out' }}>
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', animation: 'fadeIn .2s ease-out' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
                         <div>
-                          <div style={{ fontSize: 9, fontWeight: 600, color: '#78716C', textTransform: 'uppercase', marginBottom: 3 }}>Статус</div>
+                          <div style={{ fontSize: 9, fontWeight: 600, color: '#71717A', textTransform: 'uppercase', marginBottom: 3 }}>Статус</div>
                           <select value={app.status} onChange={e => updateApp(app.id, 'status', e.target.value)}
-                            style={{ width: '100%', padding: '6px', border: '1px solid #E7E5E4', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', background: '#FAFAF9' }}>
+                            style={{ width: '100%', padding: '6px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', background: '#0A0A0B', color: '#A1A1AA' }}>
                             {Object.entries(statusMap).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
                           </select>
                         </div>
                         <div>
-                          <div style={{ fontSize: 9, fontWeight: 600, color: '#78716C', textTransform: 'uppercase', marginBottom: 3 }}>Дедлайн</div>
+                          <div style={{ fontSize: 9, fontWeight: 600, color: '#71717A', textTransform: 'uppercase', marginBottom: 3 }}>Дедлайн</div>
                           <input type="date" value={app.deadline} onChange={e => updateApp(app.id, 'deadline', e.target.value)}
-                            style={{ width: '100%', padding: '6px', border: '1px solid #E7E5E4', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', background: '#FAFAF9' }} />
+                            style={{ width: '100%', padding: '6px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', background: '#0A0A0B', color: '#A1A1AA' }} />
                         </div>
                       </div>
                       <textarea value={app.notes || ''} onChange={e => updateApp(app.id, 'notes', e.target.value)}
                         placeholder="Бележки..." rows={2}
-                        style={{ width: '100%', padding: '6px', border: '1px solid #E7E5E4', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', resize: 'vertical', marginBottom: 6 }} />
-                      <button onClick={() => removeApp(app.id)} style={{ fontSize: 10, color: '#E11D48', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>🗑️ Премахни</button>
+                        style={{ width: '100%', padding: '6px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', resize: 'vertical', marginBottom: 6, background: '#0A0A0B', color: '#A1A1AA' }} />
+                      <button onClick={() => removeApp(app.id)} style={{ fontSize: 10, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>🗑️ Премахни</button>
                     </div>
                   )}
                 </Card>
@@ -209,7 +209,7 @@ export default function ApplicationTracker() {
                 {Object.entries(statusMap).map(([k, v]) => {
                   const count = apps.filter(a => a.status === k).length;
                   if (!count) return null;
-                  return <span key={k} style={{ padding: '3px 10px', borderRadius: 8, fontSize: 10, fontWeight: 600, color: v.color, background: v.bg }}>{v.label} × {count}</span>;
+                  return <span key={k} style={{ padding: '3px 10px', borderRadius: 100, fontSize: 10, fontWeight: 600, color: v.color, background: v.bg }}>{v.label} × {count}</span>;
                 })}
               </div>
             )}
@@ -224,18 +224,18 @@ export default function ApplicationTracker() {
             const [y, m] = ym.split('-');
             return (
               <div key={ym} style={{ marginBottom: 18 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, fontFamily: "'Playfair Display',serif", marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 28, height: 28, borderRadius: 7, background: '#EFF6FF', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#2563EB' }}>{monthNames[parseInt(m) - 1]}</span>
+                <div style={{ fontSize: 14, fontWeight: 600, fontFamily: "'Space Grotesk',sans-serif", marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, color: '#FFFFFF' }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 7, background: 'rgba(204,255,0,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#CCFF00' }}>{monthNames[parseInt(m) - 1]}</span>
                   {monthNames[parseInt(m) - 1]} {y}
                 </div>
                 {items.map((item, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 12px', marginBottom: 4, borderLeft: `3px solid ${item.type === 'personal' ? '#E11D48' : item.type === 'scholarship' ? '#059669' : '#2563EB'}`, background: 'white', borderRadius: '0 8px 8px 0', animation: `slideIn .3s ease-out ${i * 0.03}s both` }}>
+                  <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 12px', marginBottom: 4, borderLeft: `3px solid ${item.type === 'personal' ? '#EF4444' : item.type === 'scholarship' ? '#22C55E' : '#5D5FEF'}`, background: '#161618', borderRadius: '0 8px 8px 0', animation: `slideIn .3s ease-out ${i * 0.03}s both` }}>
                     <div style={{ fontSize: 16 }}>{item.icon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600 }}>{item.label}</div>
-                      <div style={{ fontSize: 10, color: '#78716C' }}>{item.country} · {item.date.split('-').reverse().join('.')} · {item.note}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#FFFFFF' }}>{item.label}</div>
+                      <div style={{ fontSize: 10, color: '#71717A' }}>{item.country} · {item.date.split('-').reverse().join('.')} · {item.note}</div>
                     </div>
-                    <div style={{ fontSize: 9, color: '#A8A29E', flexShrink: 0 }}>
+                    <div style={{ fontSize: 9, color: '#71717A', flexShrink: 0 }}>
                       {item.type === 'scholarship' ? '🎯' : item.type === 'personal' ? '📌' : '🎓'}
                     </div>
                   </div>
@@ -243,7 +243,7 @@ export default function ApplicationTracker() {
               </div>
             );
           })}
-          <div style={{ padding: '10px', background: '#F5F5F4', borderRadius: 8, fontSize: 10, color: '#78716C', display: 'flex', gap: 12 }}>
+          <div style={{ padding: '10px', background: '#1E1E21', borderRadius: 8, fontSize: 10, color: '#A1A1AA', display: 'flex', gap: 12 }}>
             <span>🎓 Университетски дедлайни</span>
             <span>🎯 Стипендии</span>
             <span>📌 Твоите кандидатури</span>
@@ -254,28 +254,28 @@ export default function ApplicationTracker() {
       {/* ═══ CHECKLIST TAB ═══ */}
       {view === 'checklist' && (
         <div>
-          <div style={{ fontSize: 13, color: '#78716C', marginBottom: 12 }}>
+          <div style={{ fontSize: 13, color: '#71717A', marginBottom: 12 }}>
             Стандартни документи за кандидатстване. Отбележи готовите.
           </div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-            <span style={{ padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: '#059669', background: '#ECFDF5' }}>
+            <span style={{ padding: '3px 10px', borderRadius: 100, fontSize: 11, fontWeight: 600, color: '#22C55E', background: 'rgba(34,197,94,0.1)' }}>
               ✅ {Object.values(docs).filter(Boolean).length} / {docChecklist.length} готови
             </span>
-            <div style={{ flex: 1, height: 6, background: '#E7E5E4', borderRadius: 3, alignSelf: 'center', overflow: 'hidden' }}>
-              <div style={{ height: '100%', background: '#059669', borderRadius: 3, width: `${(Object.values(docs).filter(Boolean).length / docChecklist.length) * 100}%`, transition: 'width .4s' }} />
+            <div style={{ flex: 1, height: 6, background: '#1E1E21', borderRadius: 3, alignSelf: 'center', overflow: 'hidden' }}>
+              <div style={{ height: '100%', background: '#22C55E', borderRadius: 3, width: `${(Object.values(docs).filter(Boolean).length / docChecklist.length) * 100}%`, transition: 'width .4s' }} />
             </div>
           </div>
           {docChecklist.map((doc, i) => (
             <div key={doc.id} onClick={() => toggleDoc(doc.id)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: docs[doc.id] ? '#ECFDF5' : 'white', border: '1px solid ' + (docs[doc.id] ? '#A7F3D0' : '#E7E5E4'), borderRadius: 10, marginBottom: 6, cursor: 'pointer', transition: 'all .15s ease', animation: `slideIn .3s ease-out ${i * 0.03}s both` }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: docs[doc.id] ? 'rgba(34,197,94,0.15)' : '#161618', border: '1px solid ' + (docs[doc.id] ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'), borderRadius: 10, marginBottom: 6, cursor: 'pointer', transition: 'all .15s ease', animation: `slideIn .3s ease-out ${i * 0.03}s both` }}>
               <div style={{
-                width: 22, height: 22, borderRadius: 6, border: docs[doc.id] ? 'none' : '2px solid #D6D3D1',
-                background: docs[doc.id] ? '#059669' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 22, height: 22, borderRadius: 6, border: docs[doc.id] ? 'none' : '2px solid #71717A',
+                background: docs[doc.id] ? '#22C55E' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: 'white', fontSize: 12, fontWeight: 700, flexShrink: 0, transition: 'all .15s ease'
               }}>{docs[doc.id] ? '✓' : ''}</div>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 500, textDecoration: docs[doc.id] ? 'line-through' : 'none', color: docs[doc.id] ? '#059669' : '#1C1917' }}>{doc.label}</div>
-                <div style={{ fontSize: 10, color: '#A8A29E' }}>{doc.note}</div>
+                <div style={{ fontSize: 12, fontWeight: 500, textDecoration: docs[doc.id] ? 'line-through' : 'none', color: docs[doc.id] ? '#22C55E' : '#FFFFFF' }}>{doc.label}</div>
+                <div style={{ fontSize: 10, color: '#71717A' }}>{doc.note}</div>
               </div>
             </div>
           ))}
