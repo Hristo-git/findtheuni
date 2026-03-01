@@ -130,9 +130,31 @@ export default function App() {
   const UniRow = ({ u }) => {
     const matchedProgs = sr ? u.programs.filter(p => p.toLowerCase().includes(sr.toLowerCase())) : [];
     const matchScore = calcMatch(u, profile);
+    const handleClick = () => { sL(u); if (pg !== "browse") nv("browse"); sTab("info"); };
+    if (isMobile) return (
+      <Card style={{ padding: "10px 12px", marginBottom: 8, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }} onClick={handleClick}>
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{u.emoji}</div>
+          {matchScore !== null && <div style={{ position: "absolute", bottom: -3, right: -3, width: 18, height: 18, borderRadius: "50%", background: matchScore >= 75 ? "#22C55E" : matchScore >= 50 ? "#F59E0B" : "#71717A", color: "#0A0A0B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 7, fontWeight: 700, border: "2px solid #0A0A0B" }}>{matchScore}</div>}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</div>
+          <div style={{ display: "flex", gap: 5, fontSize: 11, color: "#71717A", marginTop: 2, alignItems: "center" }}>
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}>📍{u.city}</span>
+            <span style={{ flexShrink: 0 }}>· 🏆#{u.rank}</span>
+            <span style={{ flexShrink: 0, color: u.tuition[0] === 0 ? "#22C55E" : "#A1A1AA" }}>· {u.tuition[0] === 0 ? "🎉 Безпл." : `€${u.tuition[0]}`}</span>
+            <span style={{ flexShrink: 0, color: "#F59E0B" }}>· ⭐{u.rating}</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+          <div onClick={e => { e.stopPropagation(); tf(u.id) }} style={{ fontSize: 16, cursor: "pointer" }}>{fav.includes(u.id) ? "❤️" : "🤍"}</div>
+          <div onClick={e => { e.stopPropagation(); tc(u.id) }} style={{ width: 22, height: 22, border: cm.includes(u.id) ? "none" : "2px solid rgba(255,255,255,0.15)", borderRadius: 7, background: cm.includes(u.id) ? "#5D5FEF" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{cm.includes(u.id) ? "✓" : ""}</div>
+        </div>
+      </Card>
+    );
     return (
     <Card style={{ padding: "16px 18px", marginBottom: 10, cursor: "pointer", display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center" }}
-      onClick={() => { sL(u); if (pg !== "browse") nv("browse"); sTab("info"); }}>
+      onClick={handleClick}>
       <div style={{ position: "relative" }}>
         <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{u.emoji}</div>
         {matchScore !== null && <div style={{ position: "absolute", bottom: -3, right: -3, width: 22, height: 22, borderRadius: "50%", background: matchScore >= 75 ? "#22C55E" : matchScore >= 50 ? "#F59E0B" : "#71717A", color: "#0A0A0B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, border: "2px solid #0A0A0B" }}>{matchScore}</div>}
