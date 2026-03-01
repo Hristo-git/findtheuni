@@ -28,11 +28,16 @@ function calcMatch(u, profile) {
     score += monthlyTotal <= profile.budget ? 25 : monthlyTotal <= profile.budget * 1.3 ? 15 : 5;
   } else score += 12;
   max += 25;
-  if (profile.langPref === 'en') score += u.international > 15 ? 20 : 10;
-  else if (profile.langPref === 'de') score += ['Германия','Австрия','Швейцария'].includes(u.country) ? 20 : 5;
-  else if (profile.langPref === 'fr') score += ['Франция','Швейцария','Белгия'].includes(u.country) ? 20 : 5;
-  else if (profile.langPref === 'local') score += u.tuition[0] === 0 ? 20 : 10;
-  else score += 10;
+  if (profile.langPref === 'en' || (Array.isArray(profile.langPref) && profile.langPref.includes('en')))
+    score += u.international > 15 ? 20 : 10;
+  if (profile.langPref === 'de' || (Array.isArray(profile.langPref) && profile.langPref.includes('de')))
+    score += ['Германия','Австрия','Швейцария'].includes(u.country) ? 20 : 5;
+  if (profile.langPref === 'fr' || (Array.isArray(profile.langPref) && profile.langPref.includes('fr')))
+    score += ['Франция','Швейцария','Белгия'].includes(u.country) ? 20 : 5;
+  if (profile.langPref === 'local' || (Array.isArray(profile.langPref) && profile.langPref.includes('local')))
+    score += u.tuition[0] === 0 ? 20 : 10;
+  if (!profile.langPref || (Array.isArray(profile.langPref) && profile.langPref.length === 0))
+    score += 10;
   max += 20;
   score += u.rank <= 100 ? 15 : u.rank <= 300 ? 12 : u.rank <= 600 ? 8 : 4;
   max += 15;
@@ -252,7 +257,7 @@ export default function App() {
           </div>
 
           {/* Bento Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12, marginBottom: 40 }}>
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fit,minmax(${isMobile ? 150 : 220}px,1fr))`, gap: isMobile ? 8 : 12, marginBottom: 40 }}>
             {[
               { i: "🤖", t: "AI Съветник", d: "Питай Claude за университети, стипендии, програми.", click: () => setChat(true), accent: true },
               { i: "🧬", t: "RIASEC Тест", d: "18 въпроса → Holland Code + Архетип.", click: () => nv("test") },
@@ -375,7 +380,7 @@ export default function App() {
               )}
             </div>
             {tab === "info" && <div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 10, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${isMobile ? 2 : 3},1fr)`, gap: 8, marginBottom: 16 }}>
                 {[{ v: `#${sl.rank}`, l: "Ранг", cl: "#CCFF00" }, { v: `⭐${sl.rating}`, l: "Рейтинг", cl: "#F59E0B" }, { v: sl.tuition[0] === 0 && sl.tuition[1] === 0 ? "Безпл." : `€${sl.tuition[0]}–${sl.tuition[1]}`, l: "Такса", cl: "#22C55E" }, { v: sl.students.toLocaleString(), l: "Студенти", cl: "#5D5FEF" }, { v: `${sl.acceptance}%`, l: "Приемане", cl: "#EF4444" }, { v: `${sl.employability}%`, l: "Заетост", cl: "#14B8A6" }].map((s, i) => <Card key={i} style={{ textAlign: "center", padding: 12 }}>
                   <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 700, color: s.cl }}>{s.v}</div>
                   <div style={{ fontSize: 10, color: "#71717A", marginTop: 2 }}>{s.l}</div>
@@ -401,8 +406,8 @@ export default function App() {
             </div>
           </div>
           : <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 28, fontWeight: 700 }}>Университети</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, flexWrap: "wrap", gap: 8 }}>
+              <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: isMobile ? 22 : 28, fontWeight: 700 }}>Университети</h2>
               <div style={{ display: "flex", gap: 8 }}>
                 <Btn ghost sm onClick={() => setMap(!mapMode)} style={{ color: mapMode ? "#CCFF00" : undefined }}>🗺️ Карта</Btn>
                 {fav.length > 0 && <Btn ghost sm>❤️ {fav.length}</Btn>}
@@ -445,7 +450,7 @@ export default function App() {
         {pg === "compare" && <div style={{ padding: "32px 0" }} className="page-enter">
           <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 28, fontWeight: 700, marginBottom: 6 }}>Сравнение</h2>
           {cm.length === 0 ? <div style={{ textAlign: "center", padding: "48px 0" }}><div style={{ fontSize: 48, marginBottom: 10 }}>📊</div><p style={{ color: "#71717A", fontSize: 14 }}>Избери до 4 университета</p><Btn primary onClick={() => nv("browse")} style={{ marginTop: 14 }}>Университети →</Btn></div>
-            : <div style={{ overflow: "auto" }}><Card style={{ overflow: "hidden", padding: 0 }}>
+            : <Card style={{ overflowX: "auto", padding: 0 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead><tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}><th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "#71717A", fontSize: 11, background: "#161618", minWidth: 100 }}></th>
                   {cm.map(id => { const u = universities.find(x => x.id === id); return u ? <th key={id} style={{ padding: 12, textAlign: "center", minWidth: 140 }}>
@@ -456,7 +461,7 @@ export default function App() {
                   <td style={{ padding: "10px 12px", fontWeight: 600, color: "#71717A", fontSize: 11, background: "rgba(255,255,255,0.02)" }}>{l}</td>
                   {cm.map(id => { const u = universities.find(x => x.id === id); return u ? <td key={id} style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, color: "#A1A1AA" }}>{fn(u)}</td> : null })}
                 </tr>)}</tbody></table>
-            </Card></div>}
+            </Card>}
         </div>}
 
         {/* DASHBOARD */}
@@ -472,21 +477,21 @@ export default function App() {
                   <p style={{ color: "#71717A", fontSize: 13 }}>Holland Code: <span style={{ color: "#CCFF00", fontWeight: 700, fontSize: 16, letterSpacing: 2 }}>{getR().code}</span></p></div>
                 <Btn ghost sm onClick={() => { sSt(0); sA({ R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 }); sD(false); nv("test") }}>🔄 Повтори</Btn>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14, marginBottom: 28 }}>
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 14, marginBottom: 28 }}>
                 <Card><div style={{ fontSize: 13, fontWeight: 600, color: "#71717A", marginBottom: 8 }}>🧬 RIASEC Профил</div><RadarChart data={getR().dims.map(([k, v]) => ({ label: k, value: v }))} /></Card>
                 <Card><div style={{ fontSize: 13, fontWeight: 600, color: "#71717A", marginBottom: 14 }}>📊 Резултати</div>
                   {getR().dims.map(([k, v], i) => <AnimBar key={k} value={v} max={Math.max(...getR().dims.map(d => d[1]))} color={cls[i]} label={`${dimEmoji[k]} ${RIASEC_MAP[k].name}`} />)}</Card>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10, marginBottom: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: isMobile ? 6 : 10, marginBottom: 24 }}>
                 {[[gU().length, "Препоръчани", "🎯", "#CCFF00"], [cm.length, "Сравнение", "📊", "#5D5FEF"], [fav.length, "Любими", "❤️", "#EF4444"], [new Set(gU().map(u => u.country)).size, "Държави", "🌍", "#22C55E"]].map(([v, l, icon, cl], i) =>
-                  <Card key={i} style={{ textAlign: "center", padding: 16 }}>
-                    <div style={{ fontSize: 18 }}>{icon}</div>
-                    <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 28, fontWeight: 700, color: cl, marginTop: 4 }}>{v}</div>
-                    <div style={{ fontSize: 11, color: "#71717A", marginTop: 2 }}>{l}</div>
+                  <Card key={i} style={{ textAlign: "center", padding: isMobile ? 10 : 16 }}>
+                    <div style={{ fontSize: isMobile ? 16 : 18 }}>{icon}</div>
+                    <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: isMobile ? 22 : 28, fontWeight: 700, color: cl, marginTop: 4 }}>{v}</div>
+                    <div style={{ fontSize: isMobile ? 9 : 11, color: "#71717A", marginTop: 2 }}>{l}</div>
                   </Card>)}
               </div>
               {(() => { const arch = getArchetype(getR().top3.slice(0, 2)); return (
-                <Card style={{ marginBottom: 20, background: "rgba(204,255,0,0.04)", border: "1px solid rgba(204,255,0,0.12)", display: "flex", gap: 14, alignItems: "center", padding: "16px 20px" }}>
+                <Card style={{ marginBottom: 20, background: "rgba(204,255,0,0.04)", border: "1px solid rgba(204,255,0,0.12)", display: "flex", gap: 14, alignItems: isMobile ? "flex-start" : "center", padding: "16px 20px", flexWrap: "nowrap" }}>
                   <div style={{ fontSize: 38 }}>{arch.emoji}</div>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 700 }}>Архетип: <span className="grad-text">{arch.name}</span></div>

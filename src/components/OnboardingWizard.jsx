@@ -11,12 +11,12 @@ const steps = [
       { label: '🔬 Докторат', value: 'phd', desc: '3-5 години, изследвания' },
       { label: '🤔 Не съм сигурен', value: '', desc: 'Ще ти помогнем да решиш' },
     ]},
-  { key: 'langPref', title: 'На какъв език искаш да учиш?', emoji: '🗣️',
+  { key: 'langPref', title: 'На какви езици искаш да учиш?', emoji: '🗣️', multi: true,
     opts: [
       { label: '🇬🇧 Английски', value: 'en', desc: 'Най-много програми' },
       { label: '🇩🇪 Немски', value: 'de', desc: 'Безплатно в Германия/Австрия' },
       { label: '🇫🇷 Френски', value: 'fr', desc: 'Франция, Швейцария, Белгия' },
-      { label: '🌐 На местен език (по-евтино)', value: 'local', desc: 'Често безплатно' },
+      { label: '🌐 Местен език', value: 'local', desc: 'Чехия, Полша — безплатно' },
     ]},
   { key: 'budget', title: 'Какъв месечен бюджет имаш (без такси)?', emoji: '💰' },
   { key: 'fields', title: 'Кои области те интересуват?', emoji: '🎯', multi: true },
@@ -44,7 +44,7 @@ const topFields = ["IT", "Медицина", "Инженерство", "Бизн
 export default function OnboardingWizard({ onFinish }) {
   const { update } = useUser();
   const [step, setStep] = useState(0);
-  const [data, setData] = useState({ level: '', langPref: '', budget: 800, fields: [], langCert: '' });
+  const [data, setData] = useState({ level: '', langPref: [], budget: 800, fields: [], langCert: '' });
 
   const s = steps[step];
 
@@ -62,6 +62,13 @@ export default function OnboardingWizard({ onFinish }) {
     setData(d => ({
       ...d,
       fields: d.fields.includes(f) ? d.fields.filter(x => x !== f) : [...d.fields, f]
+    }));
+  };
+
+  const toggleLang = (v) => {
+    setData(d => ({
+      ...d,
+      langPref: d.langPref.includes(v) ? d.langPref.filter(x => x !== v) : [...d.langPref, v]
     }));
   };
 
@@ -131,6 +138,36 @@ export default function OnboardingWizard({ onFinish }) {
           </div>
         )}
 
+        {/* LANG PREF STEP — multi-select */}
+        {s.key === 'langPref' && (
+          <div>
+            <div style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
+              {s.opts.map((opt, i) => {
+                const sel = data.langPref.includes(opt.value);
+                return (
+                  <button key={i} onClick={() => toggleLang(opt.value)}
+                    style={{ padding: '16px 18px', background: sel ? 'rgba(204,255,0,0.08)' : 'rgba(22,22,24,0.7)', border: sel ? '2px solid #CCFF00' : '1px solid rgba(255,255,255,0.08)', borderRadius: 24, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', transition: 'all .18s ease', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: sel ? '#CCFF00' : '#FFFFFF' }}>{opt.label}</div>
+                      <div style={{ fontSize: 11, color: '#71717A' }}>{opt.desc}</div>
+                    </div>
+                    {sel && <span style={{ fontSize: 18, flexShrink: 0 }}>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 11, color: '#71717A', textAlign: 'center', marginBottom: 10 }}>
+              {data.langPref.length === 0 ? 'Избери поне един език' : `Избрани: ${data.langPref.length}`}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <Btn primary onClick={() => step < steps.length - 1 ? setStep(step + 1) : finish(data)}
+                style={{ opacity: data.langPref.length === 0 ? 0.5 : 1 }}>
+                {data.langPref.length > 0 ? 'Продължи →' : 'Пропусни →'}
+              </Btn>
+            </div>
+          </div>
+        )}
+
         {/* FIELDS STEP — multi-select */}
         {s.key === 'fields' && (
           <div>
@@ -154,7 +191,7 @@ export default function OnboardingWizard({ onFinish }) {
         )}
 
         {/* OPTION STEPS */}
-        {s.opts && s.key !== 'fields' && (
+        {s.opts && s.key !== 'fields' && s.key !== 'langPref' && (
           <div style={{ display: 'grid', gap: 8 }}>
             {s.opts.map((opt, i) => (
               <button key={i} onClick={() => pick(s.key, opt.value)}
