@@ -72,23 +72,23 @@ export default function StudentReviews({ filterUniId }) {
     <div className="page-enter">
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
         <div>
-          <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:24, fontWeight:600 }}>🌟 Отзиви от студенти</h2>
-          <p style={{ color:'#78716C', fontSize:13, marginBottom:14 }}>{reviews.length} отзива · Средна оценка: ⭐{avgRating}/5</p>
+          <h2 style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:24, fontWeight:600, color:'#FFFFFF' }}>🌟 Отзиви от студенти</h2>
+          <p style={{ color:'#71717A', fontSize:13, marginBottom:14 }}>{reviews.length} отзива · Средна оценка: ⭐{avgRating}/5</p>
         </div>
         <Btn accent onClick={() => setShowForm(!showForm)} sm>✍️ Напиши отзив</Btn>
       </div>
 
       {/* Write review form (placeholder) */}
       {showForm && (
-        <Card style={{ marginBottom:14, background:'#FFFBEB', border:'1px solid #FDE68A', animation:'scaleIn .2s ease-out' }}>
-          <div style={{ fontSize:12, fontWeight:600, color:'#92400E', marginBottom:4 }}>✍️ Напиши отзив</div>
-          <p style={{ fontSize:11, color:'#A8752E', lineHeight:1.5 }}>
+        <Card style={{ marginBottom:14, background:'rgba(245,158,11,0.1)', border:'1px solid rgba(245,158,11,0.2)', animation:'scaleIn .2s ease-out' }}>
+          <div style={{ fontSize:12, fontWeight:600, color:'#F59E0B', marginBottom:4 }}>✍️ Напиши отзив</div>
+          <p style={{ fontSize:11, color:'#F59E0B', lineHeight:1.5 }}>
             Тази функция ще бъде активна скоро! Ще можеш да споделиш опита си и да помогнеш на бъдещи студенти.
             Регистрирай се за ранен достъп.
           </p>
           <div style={{ marginTop:8, display:'flex', gap:6 }}>
-            <input placeholder="Твоят имейл..." style={{ flex:1, padding:'7px 10px', border:'1px solid #FDE68A', borderRadius:6, fontSize:11, fontFamily:'inherit', background:'white' }} />
-            <Btn sm style={{ background:'#F59E0B', color:'white', border:'none' }}>Запиши ме</Btn>
+            <input placeholder="Твоят имейл..." style={{ flex:1, padding:'7px 10px', border:'1px solid rgba(245,158,11,0.2)', borderRadius:6, fontSize:11, fontFamily:'inherit', background:'#0A0A0B', color:'#A1A1AA' }} />
+            <Btn sm style={{ background:'#F59E0B', color:'#0A0A0B', border:'none' }}>Запиши ме</Btn>
           </div>
         </Card>
       )}
@@ -96,16 +96,16 @@ export default function StudentReviews({ filterUniId }) {
       {/* Aggregate aspect bars */}
       {reviews.length > 0 && (
         <Card style={{ marginBottom:14 }}>
-          <div style={{ fontSize:12, fontWeight:600, marginBottom:8 }}>📊 Средни оценки по аспект</div>
+          <div style={{ fontSize:12, fontWeight:600, marginBottom:8, color:'#FFFFFF' }}>📊 Средни оценки по аспект</div>
           <div style={{ display:'grid', gap:6 }}>
             {Object.entries(aspectLabels).map(([k, label]) => (
               <div key={k} style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <span style={{ fontSize:12, width:16 }}>{aspectEmoji[k]}</span>
-                <span style={{ fontSize:11, width:90, color:'#78716C' }}>{label}</span>
-                <div style={{ flex:1, height:8, background:'#E7E5E4', borderRadius:4, overflow:'hidden' }}>
-                  <div style={{ height:'100%', background: avgAspects[k] >= 4 ? '#059669' : avgAspects[k] >= 3 ? '#F59E0B' : '#E11D48', borderRadius:4, width:`${avgAspects[k] / 5 * 100}%`, transition:'width .6s' }} />
+                <span style={{ fontSize:11, width:90, color:'#71717A' }}>{label}</span>
+                <div style={{ flex:1, height:8, background:'rgba(255,255,255,0.08)', borderRadius:4, overflow:'hidden' }}>
+                  <div style={{ height:'100%', background: avgAspects[k] >= 4 ? '#22C55E' : avgAspects[k] >= 3 ? '#F59E0B' : '#EF4444', borderRadius:4, width:`${avgAspects[k] / 5 * 100}%`, transition:'width .6s' }} />
                 </div>
-                <span style={{ fontSize:11, fontWeight:600, width:28, textAlign:'right' }}>{avgAspects[k]}</span>
+                <span style={{ fontSize:11, fontWeight:600, width:28, textAlign:'right', color:'#FFFFFF' }}>{avgAspects[k]}</span>
               </div>
             ))}
           </div>
@@ -116,12 +116,12 @@ export default function StudentReviews({ filterUniId }) {
       {!filterUniId && (
         <div style={{ display:'flex', gap:8, marginBottom:12 }}>
           <select value={filterCountry} onChange={e => setFilterCountry(e.target.value)}
-            style={{ padding:'6px 10px', border:'1px solid #E7E5E4', borderRadius:6, fontSize:11, fontFamily:'inherit', background:'white' }}>
+            style={{ padding:'6px 10px', border:'1px solid rgba(255,255,255,0.1)', borderRadius:6, fontSize:11, fontFamily:'inherit', background:'#0A0A0B', color:'#A1A1AA' }}>
             <option value="">Всички държави</option>
             {countries.map(c => <option key={c}>{c}</option>)}
           </select>
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}
-            style={{ padding:'6px 10px', border:'1px solid #E7E5E4', borderRadius:6, fontSize:11, fontFamily:'inherit', background:'white' }}>
+            style={{ padding:'6px 10px', border:'1px solid rgba(255,255,255,0.1)', borderRadius:6, fontSize:11, fontFamily:'inherit', background:'#0A0A0B', color:'#A1A1AA' }}>
             <option value="recent">Най-нови</option>
             <option value="rating">Най-висока оценка</option>
           </select>
@@ -135,18 +135,18 @@ export default function StudentReviews({ filterUniId }) {
           <Card key={r.id} style={{ marginBottom:8, padding:'14px 16px', animation:`slideIn .3s ease-out ${i*0.04}s both` }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6 }}>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <div style={{ width:32, height:32, borderRadius:8, background:'#F5F5F4', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>{uni?.emoji || '🎓'}</div>
+                <div style={{ width:32, height:32, borderRadius:8, background:'rgba(255,255,255,0.06)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>{uni?.emoji || '🎓'}</div>
                 <div>
-                  <div style={{ fontSize:12, fontWeight:600 }}>{r.user}</div>
-                  <div style={{ fontSize:10, color:'#78716C' }}>{uni?.nameEn} · {r.program} · {r.year}</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:'#FFFFFF' }}>{r.user}</div>
+                  <div style={{ fontSize:10, color:'#71717A' }}>{uni?.nameEn} · {r.program} · {r.year}</div>
                 </div>
               </div>
               <div style={{ color:'#F59E0B' }}><Stars n={r.rating} /></div>
             </div>
-            <p style={{ fontSize:12, color:'#57534E', lineHeight:1.5, marginBottom:8 }}>{r.text}</p>
+            <p style={{ fontSize:12, color:'#A1A1AA', lineHeight:1.5, marginBottom:8 }}>{r.text}</p>
             <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
               {Object.entries(r.aspects).map(([k, v]) => (
-                <span key={k} style={{ padding:'2px 8px', borderRadius:6, fontSize:9, background: v >= 4 ? '#ECFDF5' : v >= 3 ? '#FFFBEB' : '#FFF1F2', color: v >= 4 ? '#059669' : v >= 3 ? '#92400E' : '#E11D48', fontWeight:500 }}>
+                <span key={k} style={{ padding:'2px 8px', borderRadius:100, fontSize:9, background: v >= 4 ? 'rgba(34,197,94,0.1)' : v >= 3 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)', color: v >= 4 ? '#22C55E' : v >= 3 ? '#F59E0B' : '#EF4444', fontWeight:500 }}>
                   {aspectEmoji[k]} {aspectLabels[k]} {v}/5
                 </span>
               ))}
@@ -156,7 +156,7 @@ export default function StudentReviews({ filterUniId }) {
       })}
 
       {reviews.length === 0 && (
-        <div style={{ textAlign:'center', padding:'40px 0', color:'#A8A29E' }}>
+        <div style={{ textAlign:'center', padding:'40px 0', color:'#71717A' }}>
           <div style={{ fontSize:40, marginBottom:8 }}>🌟</div>
           <p>Все още няма отзиви. Бъди първият!</p>
         </div>

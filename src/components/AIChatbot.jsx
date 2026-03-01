@@ -493,53 +493,121 @@ export default function AIChatbot({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div style={{ position: 'fixed', bottom: 16, right: 16, width: 360, maxHeight: '70vh', background: 'white', borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', zIndex: 200, display: 'flex', flexDirection: 'column', animation: 'scaleIn .3s ease-out', overflow: 'hidden' }}>
+    <div style={{
+      position: 'fixed', bottom: 16, right: 16, width: 370, maxHeight: '70vh',
+      background: '#161618',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 24,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+      zIndex: 200, display: 'flex', flexDirection: 'column',
+      animation: 'scaleIn .3s ease-out', overflow: 'hidden',
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)',
+    }}>
       {/* Header */}
-      <div style={{ padding: '14px 16px', background: 'linear-gradient(135deg,#2563EB,#7C3AED)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{
+        padding: '14px 16px',
+        background: 'linear-gradient(135deg, #5D5FEF, #818CF8)',
+        color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>🤖</span>
-          <div><div style={{ fontSize: 14, fontWeight: 600 }}>AI Съветник</div>
-          <div style={{ fontSize: 10, opacity: 0.8 }}>Read More Assistant</div></div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif", color: '#FFFFFF' }}>AI Съветник</div>
+            <div style={{ fontSize: 10, opacity: 0.8, color: 'rgba(255,255,255,0.7)' }}>Read More Assistant</div>
+          </div>
         </div>
-        <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, padding: '4px 8px', color: 'white', fontSize: 14 }}>✕</button>
+        <button onClick={onClose} style={{
+          background: 'rgba(255,255,255,0.15)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: 100,
+          padding: '4px 10px', color: 'white', fontSize: 14, cursor: 'pointer',
+          transition: 'background 0.2s ease',
+        }}>✕</button>
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', minHeight: 200, maxHeight: 'calc(70vh - 120px)' }}>
+      <div style={{
+        flex: 1, overflowY: 'auto', padding: '12px 14px',
+        minHeight: 200, maxHeight: 'calc(70vh - 120px)',
+        background: '#0A0A0B',
+      }}>
         {msgs.map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: m.from === 'user' ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
             <div style={{
               maxWidth: '85%', padding: '10px 14px', borderRadius: 14,
-              background: m.from === 'user' ? '#2563EB' : '#F5F5F4',
-              color: m.from === 'user' ? 'white' : '#1C1917',
+              background: m.from === 'user' ? '#5D5FEF' : 'rgba(255,255,255,0.08)',
+              color: m.from === 'user' ? '#FFFFFF' : '#E4E4E7',
               fontSize: 12, lineHeight: 1.5,
               borderBottomRightRadius: m.from === 'user' ? 4 : 14,
               borderBottomLeftRadius: m.from === 'ai' ? 4 : 14,
+              border: m.from === 'ai' ? '1px solid rgba(255,255,255,0.08)' : 'none',
             }}>
               {formatMsg(m.text)}
             </div>
           </div>
         ))}
         {typing && (
-          <div style={{ display: 'flex', gap: 4, padding: '8px 12px', background: '#F5F5F4', borderRadius: 14, width: 'fit-content', marginBottom: 10 }}>
-            {[0, 1, 2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#A8A29E', animation: `float 1.2s ease-in-out ${i * 0.15}s infinite` }} />)}
+          <div style={{
+            display: 'flex', gap: 4, padding: '8px 12px',
+            background: 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 14, width: 'fit-content', marginBottom: 10,
+          }}>
+            {[0, 1, 2].map(i => <div key={i} style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: '#71717A',
+              animation: `float 1.2s ease-in-out ${i * 0.15}s infinite`,
+            }} />)}
           </div>
         )}
         <div ref={endRef} />
       </div>
 
       {/* Quick actions */}
-      <div style={{ padding: '6px 14px', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      <div style={{
+        padding: '6px 14px', display: 'flex', gap: 4, flexWrap: 'wrap',
+        background: '#161618',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+      }}>
         {['💰 Безплатно', '💻 IT', '🏥 Медицина', '🎓 Стипендии', '📅 Срокове', '🛂 Виза', '⚖️ Сравни'].map(q => (
-          <button key={q} onClick={() => send(q.slice(2).trim())} style={{ padding: '3px 8px', borderRadius: 8, fontSize: 10, border: '1px solid #E7E5E4', background: '#FAFAF9', color: '#78716C' }}>{q}</button>
+          <button key={q} onClick={() => send(q.slice(2).trim())} style={{
+            padding: '3px 10px', borderRadius: 100, fontSize: 10,
+            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'rgba(255,255,255,0.05)',
+            color: '#A1A1AA',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}>{q}</button>
         ))}
       </div>
 
       {/* Input */}
-      <div style={{ padding: '10px 14px', borderTop: '1px solid #E7E5E4', display: 'flex', gap: 8 }}>
+      <div style={{
+        padding: '10px 14px',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex', gap: 8,
+        background: '#161618',
+      }}>
         <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Попитай нещо..." style={{ flex: 1, padding: '8px 12px', border: '1px solid #E7E5E4', borderRadius: 10, fontSize: 13, fontFamily: 'inherit', outline: 'none' }} />
-        <button onClick={send} style={{ padding: '8px 14px', borderRadius: 10, background: '#2563EB', color: 'white', border: 'none', fontSize: 13, fontWeight: 600 }}>→</button>
+          placeholder="Попитай нещо..." style={{
+            flex: 1, padding: '8px 12px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 10, fontSize: 13,
+            fontFamily: 'inherit', outline: 'none',
+            background: '#0A0A0B',
+            color: '#FFFFFF',
+          }} />
+        <button onClick={send} style={{
+          padding: '8px 14px', borderRadius: 100,
+          background: '#CCFF00', color: '#0A0A0B',
+          border: 'none', fontSize: 13, fontWeight: 600,
+          fontFamily: "'Space Grotesk', sans-serif",
+          cursor: 'pointer',
+          transition: 'opacity 0.2s ease',
+        }}>→</button>
       </div>
     </div>
   );
