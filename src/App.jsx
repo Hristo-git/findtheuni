@@ -12,6 +12,7 @@ import PeerChat from './components/PeerChat';
 import OnboardingWizard from './components/OnboardingWizard';
 import B2BPage from './components/B2BPage';
 import { useUser } from './UserContext';
+import { Analytics } from '@vercel/analytics/react';
 
 const cls = ["#CCFF00", "#5D5FEF", "#22C55E", "#F59E0B", "#EF4444", "#14B8A6"];
 
@@ -566,6 +567,7 @@ export default function App() {
         🎓 FindTheUni v7 © 2026 · <span style={{ color: "#CCFF00" }}>Glass & Neon Grid</span> · AI Matching
         {!profile.onboarded && <span style={{ marginLeft: 10 }}><button onClick={() => setShowOnboarding(true)} style={{ fontSize: 11, color: '#CCFF00', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'inherit' }}>Настрой профила →</button></span>}
       </div>
+      <Analytics />
     </div>
   );
 }
