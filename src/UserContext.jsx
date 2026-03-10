@@ -7,7 +7,7 @@ const JOURNEY_STAGES = [
   { id: 'career', label: 'Кариера', emoji: '🧬', route: 'test' },
   { id: 'countries', label: 'Държави', emoji: '🌍', route: 'guides' },
   { id: 'universities', label: 'Университети', emoji: '🎓', route: 'browse' },
-  { id: 'programs', label: 'Програми', emoji: '📚', route: 'browse' },
+  { id: 'programs', label: 'Програми', emoji: '📚', route: 'programs' },
   { id: 'planning', label: 'Планиране', emoji: '📋', route: 'tracker' },
   { id: 'applying', label: 'Кандидатстване', emoji: '📤', route: 'tracker' },
 ];

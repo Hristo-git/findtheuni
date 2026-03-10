@@ -4,25 +4,46 @@ import { Btn, Card } from './UI';
 import { useUser } from '../UserContext';
 import { calcMatch } from '../utils/matching';
 
+// Keywords → field mapping (program name → detected field)
+const FIELD_KEYWORDS = {
+  'IT': ['Информатика', 'Computer Science', 'Computer Eng', 'Software', 'Informatics', 'Data Science', 'AI', 'Artificial Intelligence', 'ICT', 'Computing', 'Information Technology', 'Informatik', 'Informatique'],
+  'Инженерство': ['Електроинж', 'Машиностроене', 'Мехатроника', 'Engineering', 'Maschinenbau', 'Mechanical', 'Civil', 'Chemical Eng', 'Aerospace', 'Sustainable Energy', 'Robotics', 'Electronics', 'Electrical'],
+  'Бизнес': ['Бизнес адм', 'Business', 'Management', 'MBA', 'Int. Business', 'BWL'],
+  'Финанси': ['Финанси', 'Finance', 'Accounting', 'Banking'],
+  'Маркетинг': ['Маркетинг', 'Marketing'],
+  'Икономика': ['Икономика', 'Economics', 'МИО'],
+  'Медицина': ['Обща медицина', 'Дентална', 'Medicine', 'Medical', 'MBBS', 'Biomedical', 'Невронаука'],
+  'Фармация': ['Фармация', 'Pharmacy', 'Pharmaceutical'],
+  'Право': ['Право', 'Law', 'Rechtswissenschaft', 'LLB', 'LLM', 'Juris'],
+  'Дизайн': ['Графичен дизайн', 'Дизайн', 'Design', 'Fine Arts'],
+  'Архитектура': ['Архитектура', 'Architecture'],
+  'Природни науки': ['Биология', 'Химия', 'Физика', 'Natural Sciences', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Biotechnology', 'Math'],
+  'Хуманитарни': ['Философия', 'История', 'Литература', 'PPE', 'Психология', 'Полит. науки', 'МО', 'Int. Studies', 'Education', 'Педагогика', 'Humanities', 'Psychology', 'Political', 'Philosophy', 'History'],
+  'Педагогика': ['Педагогика', 'Pedagogy', 'Teacher Education', 'Education'],
+};
+
+function detectField(programName, uniFields) {
+  const pLower = programName.toLowerCase();
+  for (const [field, keywords] of Object.entries(FIELD_KEYWORDS)) {
+    if (uniFields.includes(field) && keywords.some(kw => pLower.includes(kw.toLowerCase()))) {
+      return field;
+    }
+  }
+  // Second pass: match without requiring uni to have the field
+  for (const [field, keywords] of Object.entries(FIELD_KEYWORDS)) {
+    if (keywords.some(kw => pLower.includes(kw.toLowerCase()))) {
+      return field;
+    }
+  }
+  return uniFields[0];
+}
+
 // Build flat program list from all universities
 const allPrograms = universities.flatMap(u =>
   u.programs.map(p => ({
     program: p,
     uni: u,
-    field: u.fields.find(f => {
-      const map = {
-        'IT': ['Информатика', 'CS', 'AI', 'Data Science', 'Software Eng.', 'ICT', 'Computing', 'Computer Eng.', 'Tech'],
-        'Инженерство': ['Електроинж.', 'Машиностроене', 'Мехатроника', 'Engineering', 'Chemical Eng.', 'Mech. Eng.', 'Aerospace', 'Sustainable Energy', 'Robotics'],
-        'Бизнес': ['Финанси', 'Маркетинг', 'МИО', 'Бизнес адм.', 'Int. Business', 'Business', 'Management', 'Economics', 'Finance'],
-        'Медицина': ['Обща медицина', 'Дентална', 'Фармация', 'Medicine', 'Biomedical Sci.', 'Невронаука'],
-        'Право': ['Право', 'Law'],
-        'Дизайн': ['Графичен дизайн', 'Дизайн', 'Design', 'Fine Arts'],
-        'Архитектура': ['Архитектура', 'Architecture'],
-        'Природни науки': ['Биология', 'Химия', 'Физика', 'Natural Sciences', 'Mathematics', 'Physics', 'Math'],
-        'Хуманитарни': ['Философия', 'История', 'Литература', 'PPE', 'Психология', 'Полит. науки', 'МО', 'Int. Studies', 'Education', 'Педагогика'],
-      };
-      return map[f]?.some(kw => p.includes(kw) || kw.includes(p));
-    }) || u.fields[0],
+    field: detectField(p, u.fields),
   }))
 );
 
@@ -47,7 +68,7 @@ export default function ProgramExplorer({ onSelectUni }) {
         p.uni.city.toLowerCase().includes(s)
       );
     }
-    if (filters.field) list = list.filter(p => p.uni.fields.includes(filters.field));
+    if (filters.field) list = list.filter(p => p.field === filters.field);
     if (filters.country) list = list.filter(p => p.uni.country === filters.country);
     if (filters.lang) list = list.filter(p => p.uni.languages.includes(filters.lang));
     if (filters.free) list = list.filter(p => p.uni.tuition[0] === 0);
