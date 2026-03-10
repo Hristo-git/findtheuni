@@ -11,6 +11,7 @@ import StudentReviews from './components/StudentReviews';
 import PeerChat from './components/PeerChat';
 import OnboardingWizard from './components/OnboardingWizard';
 import B2BPage from './components/B2BPage';
+import JourneyBar from './components/JourneyBar';
 import { useUser } from './UserContext';
 
 const cls = ["#CCFF00", "#5D5FEF", "#22C55E", "#F59E0B", "#EF4444", "#14B8A6"];
@@ -39,6 +40,22 @@ function calcMatch(u, profile) {
   score += (u.employability / 100) * 10;
   max += 10;
   return Math.round((score / max) * 100);
+}
+
+function getNextActions(profile) {
+  const actions = [];
+  if (!profile.onboarded) return [{ text: 'Настрой профила си', desc: 'Отнема 60 секунди', icon: '👤', route: 'home', primary: true }];
+  if (!profile.riasecDone) actions.push({ text: 'Открий кариерния си път', desc: 'RIASEC тест — 18 въпроса', icon: '🧬', route: 'test', primary: true });
+  if (!profile.quizResults) actions.push({ text: 'Намери идеалната държава', desc: 'Quiz за най-подходящи дестинации', icon: '🌍', route: 'guides', primary: !actions.length });
+  if (profile.favorites.length < 3) actions.push({ text: `Добави университети (${profile.favorites.length}/3)`, desc: 'Разгледай и запази любими', icon: '🎓', route: 'browse', primary: !actions.length });
+  if (profile.favorites.length >= 3 && !profile.applications.length) actions.push({ text: 'Започни кандидатстване', desc: `${profile.favorites.length} любими университета чакат`, icon: '📝', route: 'tracker', primary: true });
+  if (profile.applications.length > 0) {
+    const pending = profile.applications.filter(a => a.status === 'idea' || a.status === 'research' || a.status === 'docs');
+    if (pending.length > 0) actions.push({ text: `${pending.length} кандидатури в процес`, desc: 'Провери прогреса и дедлайни', icon: '📋', route: 'tracker', primary: true });
+  }
+  const docsReady = Object.values(profile.docs).filter(Boolean).length;
+  if (docsReady < 5 && profile.favorites.length > 0) actions.push({ text: `Подготви документи (${docsReady}/10)`, desc: 'Диплома, CV, мотивационно...', icon: '✅', route: 'tracker' });
+  return actions.slice(0, 3);
 }
 
 export default function App() {
@@ -162,6 +179,7 @@ export default function App() {
             )}
           </div>
         </div>
+        <JourneyBar onNavigate={nv} />
       </div>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", paddingBottom: 80 }}>
@@ -186,13 +204,14 @@ export default function App() {
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = ''; }} />
               <span style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", fontSize: 18 }}>🔍</span>
             </div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-              {!profile.riasecDone
-                ? <Btn primary onClick={() => nv("test")}>🚀 Започни за 60 секунди</Btn>
-                : <Btn primary onClick={() => nv("dash")}>📋 Моето табло</Btn>}
-              <Btn ghost onClick={() => nv("browse")}>🎓 Университети</Btn>
-              <Btn accent onClick={() => setChat(true)}>🤖 AI Съветник</Btn>
-            </div>
+            {/* Next-best-action CTAs */}
+            {(() => { const actions = getNextActions(profile); return (
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                {actions.slice(0, 1).map((a, i) => <Btn key={i} primary onClick={() => nv(a.route)}>{a.icon} {a.text}</Btn>)}
+                <Btn ghost onClick={() => nv("browse")}>🎓 Университети</Btn>
+                <Btn accent onClick={() => setChat(true)}>🤖 AI Съветник</Btn>
+              </div>
+            ); })()}
             <div style={{ display: "flex", justifyContent: "center", gap: 40, marginTop: 48, flexWrap: "wrap" }}>
               {[["70", "Университета"], ["20+", "Държави"], ["15", "Стипендии"], ["AI", "Matching"]].map(([n, l]) =>
                 <div key={l} style={{ textAlign: "center" }}>
@@ -201,6 +220,31 @@ export default function App() {
                 </div>)}
             </div>
           </div>
+
+          {/* Next Steps Cards — only when onboarded */}
+          {profile.onboarded && (() => { const actions = getNextActions(profile); return actions.length > 0 && (
+            <Card glow style={{ marginBottom: 20, padding: '20px 24px', background: 'rgba(204,255,0,0.04)', border: '1px solid rgba(204,255,0,0.15)' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>🎯</span> Следващи стъпки
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
+                {actions.map((a, i) => (
+                  <button key={i} onClick={() => nv(a.route)} style={{
+                    padding: '14px 16px', background: a.primary ? 'rgba(204,255,0,0.08)' : '#161618',
+                    border: a.primary ? '1px solid rgba(204,255,0,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: 14, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+                    transition: 'all .15s ease',
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.borderColor = '#CCFF00'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                  onMouseOut={e => { e.currentTarget.style.borderColor = a.primary ? 'rgba(204,255,0,0.25)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'none'; }}>
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>{a.icon}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 2 }}>{a.text}</div>
+                    <div style={{ fontSize: 11, color: '#71717A' }}>{a.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          ); })()}
 
           {/* Bento Grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12, marginBottom: 40 }}>
@@ -286,7 +330,7 @@ export default function App() {
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>🎯 Препоръчани области</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {getR().fields.map((f, i) => <span key={i} style={{ padding: "6px 16px", borderRadius: 100, fontSize: 13, fontWeight: 500, background: "rgba(204,255,0,0.1)", color: "#CCFF00", border: "1px solid rgba(204,255,0,0.2)" }}>{fieldEmoji[f] || "📌"} {f}</span>)}
+                {getR().fields.map((f, i) => <button key={i} onClick={() => { sF({ ...ft, f }); nv("browse"); }} style={{ padding: "6px 16px", borderRadius: 100, fontSize: 13, fontWeight: 500, background: "rgba(204,255,0,0.1)", color: "#CCFF00", border: "1px solid rgba(204,255,0,0.2)", cursor: "pointer", fontFamily: "inherit" }}>{fieldEmoji[f] || "📌"} {f} →</button>)}
               </div>
             </div>
             <h3 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, marginBottom: 12 }}>🎓 Топ за теб</h3>
@@ -350,6 +394,11 @@ export default function App() {
               <Btn accent onClick={() => tc(sl.id)} sm>{cm.includes(sl.id) ? "✓ В сравнението" : "📊 Сравни"}</Btn>
               <Btn ghost onClick={() => tf(sl.id)} sm>{fav.includes(sl.id) ? "❤️ В любими" : "🤍 Запази"}</Btn>
             </div>
+            {/* Cross-module links */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+              <button onClick={() => nv("scholarships")} style={{ padding: '6px 14px', borderRadius: 100, fontSize: 11, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', color: '#22C55E', cursor: 'pointer', fontFamily: 'inherit' }}>🎯 Стипендии за {sl.country}</button>
+              <button onClick={() => nv("guides")} style={{ padding: '6px 14px', borderRadius: 100, fontSize: 11, background: 'rgba(93,95,239,0.08)', border: '1px solid rgba(93,95,239,0.2)', color: '#818CF8', cursor: 'pointer', fontFamily: 'inherit' }}>🌍 Гайд за {sl.country}</button>
+            </div>
           </div>
           : <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -395,7 +444,7 @@ export default function App() {
         {/* COMPARE */}
         {pg === "compare" && <div style={{ padding: "32px 0" }} className="page-enter">
           <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 28, fontWeight: 700, marginBottom: 6 }}>Сравнение</h2>
-          {cm.length === 0 ? <div style={{ textAlign: "center", padding: "48px 0" }}><div style={{ fontSize: 48, marginBottom: 10 }}>📊</div><p style={{ color: "#71717A", fontSize: 14 }}>Избери до 4 университета</p><Btn primary onClick={() => nv("browse")} style={{ marginTop: 14 }}>Университети →</Btn></div>
+          {cm.length === 0 ? <div style={{ textAlign: "center", padding: "48px 0" }}><div style={{ fontSize: 48, marginBottom: 10 }}>📊</div><h3 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#fff' }}>Сравни университети</h3><p style={{ color: "#71717A", fontSize: 13, maxWidth: 360, margin: '0 auto 14px' }}>{fav.length > 0 ? `Имаш ${fav.length} любими. Добави ги за сравнение от страницата с университети!` : 'Разгледай университетите и добави до 4 за side-by-side сравнение.'}</p><Btn primary onClick={() => nv("browse")} style={{ marginTop: 14 }}>🎓 Разгледай университети →</Btn></div>
             : <div style={{ overflow: "auto" }}><Card style={{ overflow: "hidden", padding: 0 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead><tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}><th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "#71717A", fontSize: 11, background: "#161618", minWidth: 100 }}></th>
@@ -423,14 +472,68 @@ export default function App() {
                   <p style={{ color: "#71717A", fontSize: 13 }}>Holland Code: <span style={{ color: "#CCFF00", fontWeight: 700, fontSize: 16, letterSpacing: 2 }}>{getR().code}</span></p></div>
                 <Btn ghost sm onClick={() => { sSt(0); sA({ R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 }); sD(false); nv("test") }}>🔄 Повтори</Btn>
               </div>
+
+              {/* Journey Progress Card */}
+              {(() => { const actions = getNextActions(profile); return (
+                <Card glow style={{ marginBottom: 20, padding: '20px 24px', background: 'rgba(204,255,0,0.04)', border: '1px solid rgba(204,255,0,0.15)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 20 }}>🎯</span> Прогрес на пътешествието
+                    </div>
+                    <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 700, color: '#CCFF00' }}>{user.journeyProgress}%</span>
+                  </div>
+                  <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, marginBottom: 16, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', background: 'linear-gradient(90deg,#CCFF00,#5D5FEF)', borderRadius: 3, width: `${user.journeyProgress}%`, transition: 'width .6s', boxShadow: '0 0 10px rgba(204,255,0,0.3)' }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(100px,1fr))', gap: 6, marginBottom: 16 }}>
+                    {user.JOURNEY_STAGES.map(stage => {
+                      const isDone = user.completedStages.includes(stage.id);
+                      const isCurrent = user.currentStage === stage.id;
+                      return (
+                        <div key={stage.id} onClick={() => nv(stage.route)} style={{
+                          padding: '8px', borderRadius: 8, textAlign: 'center', cursor: 'pointer',
+                          background: isDone ? 'rgba(34,197,94,0.1)' : isCurrent ? 'rgba(204,255,0,0.08)' : 'rgba(255,255,255,0.03)',
+                          border: isDone ? '1px solid rgba(34,197,94,0.2)' : isCurrent ? '1px solid rgba(204,255,0,0.2)' : '1px solid rgba(255,255,255,0.06)',
+                        }}>
+                          <div style={{ fontSize: 14 }}>{isDone ? '✅' : stage.emoji}</div>
+                          <div style={{ fontSize: 9, fontWeight: 600, color: isDone ? '#22C55E' : isCurrent ? '#CCFF00' : '#52525B', marginTop: 2 }}>{stage.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {actions.length > 0 && <>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#71717A', marginBottom: 8 }}>Следващи стъпки:</div>
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      {actions.map((a, i) => (
+                        <button key={i} onClick={() => nv(a.route)} style={{
+                          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                          background: '#161618', border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                          transition: 'all .15s',
+                        }}
+                        onMouseOver={e => { e.currentTarget.style.borderColor = '#CCFF00'; e.currentTarget.style.transform = 'translateX(4px)'; }}
+                        onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.transform = 'none'; }}>
+                          <span style={{ fontSize: 18 }}>{a.icon}</span>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{a.text}</div>
+                            <div style={{ fontSize: 10, color: '#71717A' }}>{a.desc}</div>
+                          </div>
+                          <span style={{ marginLeft: 'auto', color: '#CCFF00', fontSize: 12 }}>→</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>}
+                </Card>
+              ); })()}
+
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14, marginBottom: 28 }}>
                 <Card><div style={{ fontSize: 13, fontWeight: 600, color: "#71717A", marginBottom: 8 }}>🧬 RIASEC Профил</div><RadarChart data={getR().dims.map(([k, v]) => ({ label: k, value: v }))} /></Card>
                 <Card><div style={{ fontSize: 13, fontWeight: 600, color: "#71717A", marginBottom: 14 }}>📊 Резултати</div>
                   {getR().dims.map(([k, v], i) => <AnimBar key={k} value={v} max={Math.max(...getR().dims.map(d => d[1]))} color={cls[i]} label={`${dimEmoji[k]} ${RIASEC_MAP[k].name}`} />)}</Card>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10, marginBottom: 24 }}>
-                {[[gU().length, "Препоръчани", "🎯", "#CCFF00"], [cm.length, "Сравнение", "📊", "#5D5FEF"], [fav.length, "Любими", "❤️", "#EF4444"], [new Set(gU().map(u => u.country)).size, "Държави", "🌍", "#22C55E"]].map(([v, l, icon, cl], i) =>
-                  <Card key={i} style={{ textAlign: "center", padding: 16 }}>
+                {[[gU().length, "Препоръчани", "🎯", "#CCFF00"], [cm.length, "Сравнение", "📊", "#5D5FEF"], [fav.length, "Любими", "❤️", "#EF4444"], [profile.applications.length, "Кандидатури", "📝", "#F59E0B"]].map(([v, l, icon, cl], i) =>
+                  <Card key={i} style={{ textAlign: "center", padding: 16, cursor: 'pointer' }} onClick={() => nv(l === 'Любими' ? 'browse' : l === 'Сравнение' ? 'compare' : l === 'Кандидатури' ? 'tracker' : 'browse')}>
                     <div style={{ fontSize: 18 }}>{icon}</div>
                     <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 28, fontWeight: 700, color: cl, marginTop: 4 }}>{v}</div>
                     <div style={{ fontSize: 11, color: "#71717A", marginTop: 2 }}>{l}</div>

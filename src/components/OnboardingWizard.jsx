@@ -28,6 +28,14 @@ const steps = [
       { label: '🟢 DELF B2+', value: 'french', desc: 'Френски — FR, CH, BE' },
       { label: '🔴 Нямам (все още)', value: 'none', desc: 'Не е проблем!' },
     ]},
+  { key: 'gpa', title: 'Какъв е твоят среден успех?', emoji: '📊' },
+  { key: 'startDate', title: 'Кога искаш да започнеш?', emoji: '📅',
+    opts: [
+      { label: '🍂 Зима 2026', value: '2026-10', desc: 'Октомври 2026' },
+      { label: '🌸 Лято 2027', value: '2027-03', desc: 'Март 2027' },
+      { label: '🍂 Зима 2027', value: '2027-10', desc: 'Октомври 2027' },
+      { label: '🤔 Не съм сигурен', value: '', desc: 'Ще реша по-късно' },
+    ]},
 ];
 
 const budgetMarks = [
@@ -44,7 +52,7 @@ const topFields = ["IT", "Медицина", "Инженерство", "Бизн
 export default function OnboardingWizard({ onFinish }) {
   const { update } = useUser();
   const [step, setStep] = useState(0);
-  const [data, setData] = useState({ level: '', langPref: '', budget: 800, fields: [], langCert: '' });
+  const [data, setData] = useState({ level: '', langPref: '', budget: 800, fields: [], langCert: '', gpa: '', startDate: '' });
 
   const s = steps[step];
 
@@ -75,6 +83,8 @@ export default function OnboardingWizard({ onFinish }) {
       budget: d.budget,
       fields: d.fields,
       langCerts,
+      gpa: d.gpa,
+      startDate: d.startDate,
       createdAt: new Date().toISOString(),
     });
     onFinish();
@@ -106,6 +116,48 @@ export default function OnboardingWizard({ onFinish }) {
           <div style={{ fontSize: 40, marginBottom: 6, animation: 'float 3s ease-in-out infinite' }}>{s.emoji}</div>
           <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 600, lineHeight: 1.3, color: '#FFFFFF' }}>{s.title}</h2>
         </div>
+
+        {/* GPA STEP — input */}
+        {s.key === 'gpa' && (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <input
+                type="text"
+                value={data.gpa}
+                onChange={e => setData({ ...data, gpa: e.target.value })}
+                placeholder="напр. 5.50, 3.8/4.0, 90%"
+                style={{
+                  padding: '14px 20px', fontSize: 22, fontWeight: 700, textAlign: 'center',
+                  fontFamily: "'Space Grotesk',sans-serif", color: '#CCFF00',
+                  background: '#161618', border: '1px solid rgba(204,255,0,0.3)',
+                  borderRadius: 16, width: '100%', maxWidth: 280, outline: 'none',
+                }}
+              />
+              <div style={{ fontSize: 11, color: '#71717A', marginTop: 8 }}>
+                Въведи успеха си в удобен формат. Различни държави ползват различни скали.
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 16 }}>
+              {[['5.50', 'БГ скала (отличен)'], ['5.00', 'БГ скала (мн. добър)'], ['3.8', 'US/4.0 скала'], ['90%', 'Процентна скала']].map(([v, desc]) => (
+                <button key={v} onClick={() => setData({ ...data, gpa: v })}
+                  style={{
+                    padding: '5px 12px', borderRadius: 100, fontSize: 11,
+                    border: data.gpa === v ? '2px solid #CCFF00' : '1px solid rgba(255,255,255,0.08)',
+                    background: data.gpa === v ? 'rgba(204,255,0,0.1)' : '#161618',
+                    color: data.gpa === v ? '#CCFF00' : '#A1A1AA',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                  {v} <span style={{ fontSize: 9, color: '#71717A' }}>{desc}</span>
+                </button>
+              ))}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <Btn primary onClick={() => step < steps.length - 1 ? setStep(step + 1) : finish(data)}>
+                {data.gpa ? 'Продължи →' : 'Пропусни →'}
+              </Btn>
+            </div>
+          </div>
+        )}
 
         {/* BUDGET STEP — slider */}
         {s.key === 'budget' && (

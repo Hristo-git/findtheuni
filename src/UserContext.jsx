@@ -1,6 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 const KEY = 'ftu_profile';
+
+const JOURNEY_STAGES = [
+  { id: 'profile', label: 'Профил', emoji: '👤', route: 'home' },
+  { id: 'career', label: 'Кариера', emoji: '🧬', route: 'test' },
+  { id: 'countries', label: 'Държави', emoji: '🌍', route: 'guides' },
+  { id: 'universities', label: 'Университети', emoji: '🎓', route: 'browse' },
+  { id: 'programs', label: 'Програми', emoji: '📚', route: 'browse' },
+  { id: 'planning', label: 'Планиране', emoji: '📋', route: 'tracker' },
+  { id: 'applying', label: 'Кандидатстване', emoji: '📤', route: 'tracker' },
+];
 
 const defaults = {
   onboarded: false,
@@ -13,6 +23,7 @@ const defaults = {
   gpa: '',            // string, flexible
   langCerts: {},      // { ielts: "6.5", toefl: "" }
   country: '',        // preferred country
+  startDate: '',      // e.g. "2026-10" preferred start semester
   riasecDone: false,
   riasecScores: { R:0, I:0, A:0, S:0, E:0, C:0 },
   riasecCode: '',
@@ -22,6 +33,7 @@ const defaults = {
   applications: [],
   docs: {},
   quizResults: null,  // destination quiz
+  targetCountries: [], // from destination quiz ranked
   createdAt: null,
 };
 
@@ -43,6 +55,27 @@ export function UserProvider({ children }) {
   useEffect(() => {
     try { localStorage.setItem(KEY, JSON.stringify(profile)); } catch {}
   }, [profile]);
+
+  // Auto-compute journey stages
+  const completedStages = useMemo(() => {
+    const done = [];
+    if (profile.onboarded) done.push('profile');
+    if (profile.riasecDone) done.push('career');
+    if (profile.quizResults || profile.targetCountries?.length > 0) done.push('countries');
+    if (profile.favorites.length >= 3) done.push('universities');
+    if (profile.applications.length > 0) done.push('planning');
+    if (profile.applications.some(a => a.status === 'applied' || a.status === 'accepted')) done.push('applying');
+    return done;
+  }, [profile]);
+
+  const currentStage = useMemo(() => {
+    for (const stage of JOURNEY_STAGES) {
+      if (!completedStages.includes(stage.id)) return stage.id;
+    }
+    return 'applying';
+  }, [completedStages]);
+
+  const journeyProgress = Math.round((completedStages.length / JOURNEY_STAGES.length) * 100);
 
   const update = (patch) => setProfile(p => ({ ...p, ...patch }));
 
@@ -98,6 +131,8 @@ export function UserProvider({ children }) {
       profile, update, toggleFav, toggleCompare,
       addApplication, updateApplication, removeApplication,
       toggleDoc, saveRiasec, resetProfile,
+      completedStages, currentStage, journeyProgress,
+      JOURNEY_STAGES,
     }}>
       {children}
     </UserCtx.Provider>

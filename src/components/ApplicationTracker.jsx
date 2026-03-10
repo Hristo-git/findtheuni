@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { universities } from '../data/universities.js';
 import { scholarships } from '../data/testData.js';
 import { Btn, Card } from './UI.jsx';
+import { useUser } from '../UserContext.jsx';
 
 // ─── Predefined deadline data ─────────────────
 const uniDeadlines = [
@@ -48,34 +49,35 @@ const docChecklist = [
 ];
 
 export default function ApplicationTracker() {
-  const [apps, setApps] = useState([]);
+  const user = useUser();
+  const apps = user.profile.applications;
+  const docs = user.profile.docs;
   const [adding, setAdding] = useState(false);
   const [selUni, setSelUni] = useState('');
   const [selProg, setSelProg] = useState('');
   const [view, setView] = useState('tracker'); // tracker | calendar | checklist
   const [expanded, setExpanded] = useState(null);
-  const [docs, setDocs] = useState({});
 
-  // Add application
+  // Add application — now persisted via UserContext
   const addApp = () => {
     if (!selUni) return;
     const uni = universities.find(u => u.id === parseInt(selUni));
     if (!uni) return;
-    setApps([...apps, {
-      id: Date.now(), uniId: uni.id, uni: uni.nameEn, country: uni.country,
+    user.addApplication({
+      uniId: uni.id, uni: uni.nameEn, country: uni.country,
       program: selProg || uni.programs[0] || 'General', emoji: uni.emoji,
-      status: 'idea', deadline: '', notes: '', addedAt: new Date().toISOString().split('T')[0]
-    }]);
+      deadline: '', notes: ''
+    });
     setSelUni(''); setSelProg(''); setAdding(false);
   };
 
   const updateApp = (id, field, value) => {
-    setApps(apps.map(a => a.id === id ? { ...a, [field]: value } : a));
+    user.updateApplication(id, { [field]: value });
   };
 
-  const removeApp = (id) => setApps(apps.filter(a => a.id !== id));
+  const removeApp = (id) => user.removeApplication(id);
 
-  const toggleDoc = (docId) => setDocs({ ...docs, [docId]: !docs[docId] });
+  const toggleDoc = (docId) => user.toggleDoc(docId);
 
   // Calendar: merge uni deadlines + scholarship deadlines + personal deadlines
   const calendarItems = useMemo(() => {
@@ -133,8 +135,15 @@ export default function ApplicationTracker() {
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 10, animation: 'float 3s ease-in-out infinite' }}>📝</div>
             <h3 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, marginBottom: 6, color: '#FFFFFF' }}>Започни да следиш кандидатурите си</h3>
-            <p style={{ color: '#71717A', fontSize: 12, marginBottom: 14, maxWidth: 360, margin: '0 auto 14px' }}>Добави университети, задай дедлайни и следи статуса на всяка кандидатура.</p>
-            <Btn accent onClick={() => setAdding(true)}>➕ Добави кандидатура</Btn>
+            <p style={{ color: '#71717A', fontSize: 12, marginBottom: 14, maxWidth: 360, margin: '0 auto 14px' }}>
+              {user.profile.favorites.length > 0
+                ? `Имаш ${user.profile.favorites.length} любими университета. Добави ги като кандидатури!`
+                : 'Първо разгледай университетите и добави любими, после ги добави тук.'}
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Btn accent onClick={() => setAdding(true)}>➕ Добави кандидатура</Btn>
+              {user.profile.favorites.length === 0 && <Btn ghost onClick={() => {/* parent navigation handled via props if needed */}}>🎓 Разгледай университети</Btn>}
+            </div>
           </div>
         ) : (
           <>

@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { scholarships } from '../data/testData';
 import { Btn, Card } from './UI';
+import { useUser } from '../UserContext';
 
 export default function ScholarshipFinder() {
+  const { profile } = useUser();
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState('');
   const [country, setCountry] = useState('');
@@ -24,6 +26,25 @@ export default function ScholarshipFinder() {
         <span style={{ fontSize: 12, color: '#71717A' }}>{filtered.length} от {scholarships.length}</span>
       </div>
       <p style={{ color: '#71717A', fontSize: 13, marginBottom: 16 }}>Намери стипендия за обучение в Европа и света</p>
+
+      {/* Eligibility hint */}
+      {profile.onboarded && (() => {
+        const eligible = filtered.filter(sc => {
+          const levelMatch = !profile.level || sc.level.some(l =>
+            (profile.level === 'bachelor' && l === 'Бакалавър') ||
+            (profile.level === 'master' && l === 'Магистър') ||
+            (profile.level === 'phd' && l === 'Докторат')
+          );
+          const fieldMatch = sc.fields[0] === 'Всички' || sc.fields.some(f => profile.fields.includes(f));
+          return levelMatch && fieldMatch;
+        });
+        return eligible.length > 0 && (
+          <div style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16 }}>✨</span>
+            <span style={{ fontSize: 12, color: '#22C55E', fontWeight: 600 }}>{eligible.length} стипендии съвпадат с профила ти ({profile.level || 'всички нива'}, {profile.fields.slice(0, 2).join(', ') || 'всички области'})</span>
+          </div>
+        );
+      })()}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
