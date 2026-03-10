@@ -10,6 +10,7 @@ import ApplicationTracker from './components/ApplicationTracker';
 import StudentReviews from './components/StudentReviews';
 import PeerChat from './components/PeerChat';
 import OnboardingWizard from './components/OnboardingWizard';
+import ProgramExplorer from './components/ProgramExplorer';
 import B2BPage from './components/B2BPage';
 import JourneyBar from './components/JourneyBar';
 import { useUser } from './UserContext';
@@ -149,7 +150,7 @@ export default function App() {
             <span className="grad-text">FindTheUni</span>
           </div>
           <div style={{ display: "flex", gap: 2, overflowX: "auto", padding: "4px 0" }}>
-            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
+            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["programs", "📚"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
               <button key={k} onClick={() => nv(k)} style={{ padding: "6px 12px", borderRadius: 100, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#CCFF00" : "#71717A", background: pg === k ? "rgba(204,255,0,0.1)" : "transparent", border: "none", flexShrink: 0 }}>{icon}</button>
             )}
           </div>
@@ -157,7 +158,7 @@ export default function App() {
         <JourneyBar onNavigate={nv} />
       </div>
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", paddingBottom: 80 }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 clamp(12px, 3vw, 20px)", paddingBottom: 80 }}>
 
         {/* HOME */}
         {pg === "home" && <div className="page-enter">
@@ -450,6 +451,7 @@ export default function App() {
           </div>}
         </div>}
 
+        {pg === "programs" && <ProgramExplorer onSelectUni={(u) => { sL(u); nv("browse"); sTab("info"); }} />}
         {pg === "scholarships" && <div style={{ padding: "32px 0" }}><ScholarshipFinder /></div>}
         {pg === "guides" && <CountryGuidesPage
           onBrowseUni={(u) => { sL(u); nv("browse"); sTab("info"); }}
@@ -464,18 +466,106 @@ export default function App() {
         {pg === "compare" && <div style={{ padding: "32px 0" }} className="page-enter">
           <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 28, fontWeight: 700, marginBottom: 6 }}>Сравнение</h2>
           {cm.length === 0 ? <div style={{ textAlign: "center", padding: "48px 0" }}><div style={{ fontSize: 48, marginBottom: 10 }}>📊</div><h3 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 6, color: '#fff' }}>Сравни университети</h3><p style={{ color: "#71717A", fontSize: 13, maxWidth: 360, margin: '0 auto 14px' }}>{fav.length > 0 ? `Имаш ${fav.length} любими. Добави ги за сравнение от страницата с университети!` : 'Разгледай университетите и добави до 4 за side-by-side сравнение.'}</p><Btn primary onClick={() => nv("browse")} style={{ marginTop: 14 }}>🎓 Разгледай университети →</Btn></div>
-            : <div style={{ overflow: "auto" }}><Card style={{ overflow: "hidden", padding: 0 }}>
+            : (() => {
+              const cmpUnis = cm.map(id => universities.find(x => x.id === id)).filter(Boolean);
+              const cmpScores = profile.onboarded ? cmpUnis.map(u => calcMatch(u, profile) || 0) : [];
+              const bestIdx = cmpScores.length > 0 ? cmpScores.indexOf(Math.max(...cmpScores)) : -1;
+              const numRows = [
+                ["Ранг", u => u.rank, 'low'],
+                ["Рейтинг", u => u.rating, 'high'],
+                ["Приемане", u => u.acceptance, 'high'],
+                ["Заетост", u => u.employability, 'high'],
+                ["€/мес", u => u.costOfLiving, 'low'],
+                ["Такса мин.", u => u.tuition[0], 'low'],
+              ];
+              return <div>
+              {/* Match score cards */}
+              {profile.onboarded && (
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cmpUnis.length}, 1fr)`, gap: 10, marginBottom: 16 }}>
+                  {cmpUnis.map((u, i) => (
+                    <Card key={u.id} style={{
+                      textAlign: 'center', padding: '16px 12px',
+                      background: i === bestIdx ? 'rgba(204,255,0,0.06)' : undefined,
+                      border: i === bestIdx ? '1px solid rgba(204,255,0,0.3)' : undefined,
+                    }}>
+                      <div style={{ fontSize: 28, marginBottom: 4 }}>{u.emoji}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', marginBottom: 4 }}>{u.nameEn}</div>
+                      <MatchRing score={cmpScores[i]} size={52} />
+                      {i === bestIdx && <div style={{ marginTop: 6, fontSize: 10, fontWeight: 700, color: '#CCFF00' }}>🏆 Най-добро съвпадение</div>}
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Radar comparison */}
+              {cmpUnis.length >= 2 && (
+                <Card style={{ marginBottom: 16, padding: '16px 20px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#71717A', marginBottom: 12 }}>📊 Визуално сравнение</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${numRows.length}, 1fr)`, gap: 6 }}>
+                    {numRows.map(([label, fn, mode]) => {
+                      const vals = cmpUnis.map(u => fn(u));
+                      const best = mode === 'high' ? Math.max(...vals) : Math.min(...vals);
+                      return (
+                        <div key={label} style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 9, color: '#71717A', marginBottom: 6, fontWeight: 600 }}>{label}</div>
+                          {cmpUnis.map((u, i) => {
+                            const v = vals[i];
+                            const isBest = v === best && new Set(vals).size > 1;
+                            return (
+                              <div key={u.id} style={{
+                                padding: '4px 0', fontSize: 11, fontWeight: isBest ? 700 : 400,
+                                color: isBest ? '#CCFF00' : '#A1A1AA',
+                              }}>
+                                {label === 'Ранг' ? `#${v}` : label.includes('€') || label.includes('Такса') ? `€${v}` : label.includes('%') || label === 'Приемане' || label === 'Заетост' ? `${v}%` : `${v}`}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
+
+              {/* Full comparison table */}
+              <div style={{ overflow: "auto" }}><Card style={{ overflow: "hidden", padding: 0 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead><tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}><th style={{ padding: 12, textAlign: "left", fontWeight: 600, color: "#71717A", fontSize: 11, background: "#161618", minWidth: 100 }}></th>
-                  {cm.map(id => { const u = universities.find(x => x.id === id); return u ? <th key={id} style={{ padding: 12, textAlign: "center", minWidth: 140 }}>
+                  {cmpUnis.map((u, i) => <th key={u.id} style={{ padding: 12, textAlign: "center", minWidth: 140, background: i === bestIdx ? 'rgba(204,255,0,0.04)' : undefined }}>
                     <div style={{ fontSize: 22 }}>{u.emoji}</div><div style={{ fontWeight: 600, fontSize: 12, color: "#fff", marginTop: 4 }}>{u.nameEn}</div>
-                    <div onClick={() => user.toggleCompare(id)} style={{ fontSize: 10, color: "#71717A", cursor: "pointer", marginTop: 4 }}>✕ Премахни</div>
-                  </th> : null })}</tr></thead>
-                <tbody>{[["Място", u => `${u.city}, ${u.country}`], ["Ранг", u => `#${u.rank}`], ["Рейтинг", u => `⭐${u.rating}`], ["Такса", u => u.tuition[0] === 0 && u.tuition[1] === 0 ? "Безпл.!" : `€${u.tuition[0]}–${u.tuition[1]}`], ["Студенти", u => u.students.toLocaleString()], ["Осн.", u => u.founded], ["Приемане", u => `${u.acceptance}%`], ["Заетост", u => `${u.employability}%`], ["€/мес", u => `€${u.costOfLiving}`], ["Тип", u => u.type === "public" ? "Държавен" : "Частен"], ["Стипендии", u => u.scholarships ? "✅" : "❌"], ["Езици", u => u.languages.join(", ")], ["Програми", u => u.programs.slice(0, 4).join(", ")]].map(([l, fn], i) => <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div onClick={() => user.toggleCompare(u.id)} style={{ fontSize: 10, color: "#71717A", cursor: "pointer", marginTop: 4 }}>✕ Премахни</div>
+                  </th>)}</tr></thead>
+                <tbody>{[
+                  ["Място", u => `${u.city}, ${u.country}`, null],
+                  ["Ранг", u => `#${u.rank}`, u => u.rank, 'low'],
+                  ["Рейтинг", u => `⭐${u.rating}`, u => u.rating, 'high'],
+                  ["Такса", u => u.tuition[0] === 0 && u.tuition[1] === 0 ? "Безпл.!" : `€${u.tuition[0]}–${u.tuition[1]}`, u => u.tuition[0], 'low'],
+                  ["Студенти", u => u.students.toLocaleString(), null],
+                  ["Осн.", u => u.founded, null],
+                  ["Приемане", u => `${u.acceptance}%`, u => u.acceptance, 'high'],
+                  ["Заетост", u => `${u.employability}%`, u => u.employability, 'high'],
+                  ["€/мес", u => `€${u.costOfLiving}`, u => u.costOfLiving, 'low'],
+                  ["Тип", u => u.type === "public" ? "Държавен" : "Частен", null],
+                  ["Стипендии", u => u.scholarships ? "✅" : "❌", null],
+                  ["Езици", u => u.languages.join(", "), null],
+                  ["Програми", u => u.programs.slice(0, 4).join(", "), null],
+                ].map(([l, fn, numFn, mode], i) => {
+                  const vals = numFn ? cmpUnis.map(u => numFn(u)) : [];
+                  const best = numFn ? (mode === 'high' ? Math.max(...vals) : Math.min(...vals)) : null;
+                  return <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 600, color: "#71717A", fontSize: 11, background: "rgba(255,255,255,0.02)" }}>{l}</td>
-                  {cm.map(id => { const u = universities.find(x => x.id === id); return u ? <td key={id} style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, color: "#A1A1AA" }}>{fn(u)}</td> : null })}
-                </tr>)}</tbody></table>
-            </Card></div>}
+                  {cmpUnis.map((u, j) => {
+                    const isBest = numFn && vals[j] === best && new Set(vals).size > 1;
+                    return <td key={u.id} style={{
+                      padding: "10px 12px", textAlign: "center", fontSize: 12,
+                      color: isBest ? "#CCFF00" : "#A1A1AA",
+                      fontWeight: isBest ? 700 : 400,
+                      background: j === bestIdx ? 'rgba(204,255,0,0.02)' : undefined,
+                    }}>{fn(u)}</td>;
+                  })}
+                </tr>})}</tbody></table>
+            </Card></div>
+            </div>; })()}
         </div>}
 
         {/* DASHBOARD */}
@@ -544,6 +634,55 @@ export default function App() {
                   </>}
                 </Card>
               ); })()}
+
+              {/* Deadline Timeline */}
+              {profile.applications.length > 0 && (
+                <Card style={{ marginBottom: 20, padding: '18px 22px' }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>📅</span> Предстоящи дедлайни
+                  </div>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {profile.applications
+                      .filter(a => a.deadline)
+                      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
+                      .slice(0, 4)
+                      .map((app, i) => {
+                        const d = new Date(app.deadline);
+                        const now = new Date();
+                        const daysLeft = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+                        const urgent = daysLeft <= 14;
+                        const past = daysLeft < 0;
+                        return (
+                          <div key={i} onClick={() => nv('tracker')} style={{
+                            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
+                            background: past ? 'rgba(239,68,68,0.06)' : urgent ? 'rgba(245,158,11,0.06)' : 'rgba(255,255,255,0.03)',
+                            border: `1px solid ${past ? 'rgba(239,68,68,0.2)' : urgent ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                            borderRadius: 10, cursor: 'pointer',
+                          }}>
+                            <div style={{ width: 36, height: 36, borderRadius: 10, background: past ? 'rgba(239,68,68,0.1)' : urgent ? 'rgba(245,158,11,0.1)' : 'rgba(93,95,239,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                              {app.emoji || '🎓'}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: '#FFFFFF' }}>{app.uni}</div>
+                              <div style={{ fontSize: 10, color: '#71717A' }}>{app.program} · {d.toLocaleDateString('bg-BG')}</div>
+                            </div>
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                              <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "'Space Grotesk',sans-serif", color: past ? '#EF4444' : urgent ? '#F59E0B' : '#818CF8' }}>
+                                {past ? 'Изтекъл' : `${daysLeft}д`}
+                              </div>
+                              <div style={{ fontSize: 9, color: '#71717A' }}>{past ? '' : urgent ? 'Скоро!' : 'остават'}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {profile.applications.filter(a => a.deadline).length === 0 && (
+                      <div style={{ textAlign: 'center', padding: '12px 0', color: '#71717A', fontSize: 12 }}>
+                        Добави дедлайни в Tracker-а за да видиш timeline тук
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14, marginBottom: 28 }}>
                 <Card><div style={{ fontSize: 13, fontWeight: 600, color: "#71717A", marginBottom: 8 }}>🧬 RIASEC Профил</div><RadarChart data={getR().dims.map(([k, v]) => ({ label: k, value: v }))} /></Card>
