@@ -56,15 +56,22 @@ export function UserProvider({ children }) {
     try { localStorage.setItem(KEY, JSON.stringify(profile)); } catch {}
   }, [profile]);
 
-  // Auto-compute journey stages
+  // Auto-compute journey stages (sequential — a stage only shows done if prior stages are also done)
   const completedStages = useMemo(() => {
+    const checks = {
+      profile: profile.onboarded,
+      career: profile.riasecDone,
+      countries: profile.quizResults || profile.targetCountries?.length > 0 || profile.favorites.length > 0,
+      universities: profile.favorites.length >= 1,
+      programs: profile.favorites.length >= 1 && profile.applications.length > 0,
+      planning: profile.applications.length > 0 && profile.applications.some(a => a.status !== 'idea'),
+      applying: profile.applications.some(a => a.status === 'applied' || a.status === 'accepted'),
+    };
     const done = [];
-    if (profile.onboarded) done.push('profile');
-    if (profile.riasecDone) done.push('career');
-    if (profile.quizResults || profile.targetCountries?.length > 0) done.push('countries');
-    if (profile.favorites.length >= 3) done.push('universities');
-    if (profile.applications.length > 0) done.push('planning');
-    if (profile.applications.some(a => a.status === 'applied' || a.status === 'accepted')) done.push('applying');
+    for (const stage of JOURNEY_STAGES) {
+      if (checks[stage.id]) done.push(stage.id);
+      else break; // Stop at first incomplete — keeps it sequential
+    }
     return done;
   }, [profile]);
 
