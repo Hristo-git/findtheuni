@@ -55,7 +55,7 @@ export default function ApplicationTracker() {
   const [adding, setAdding] = useState(false);
   const [selUni, setSelUni] = useState('');
   const [selProg, setSelProg] = useState('');
-  const [view, setView] = useState('tracker'); // tracker | calendar | checklist
+  const [view, setView] = useState('tracker'); // tracker | calendar | checklist | roadmap
   const [expanded, setExpanded] = useState(null);
 
   // Add application — now persisted via UserContext
@@ -119,8 +119,8 @@ export default function ApplicationTracker() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 8 }}>
-        {[['tracker', '📋 Кандидатури'], ['calendar', '📅 Календар'], ['checklist', '✅ Документи']].map(([k, l]) =>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 8, overflowX: 'auto' }}>
+        {[['tracker', '📋 Кандидатури'], ['roadmap', '🗺️ Roadmap'], ['calendar', '📅 Календар'], ['checklist', '✅ Документи']].map(([k, l]) =>
           <button key={k} onClick={() => setView(k)} style={{
             padding: '7px 14px', borderRadius: 100, fontSize: 12, fontWeight: view === k ? 600 : 500,
             color: view === k ? '#CCFF00' : '#71717A', background: view === k ? 'rgba(204,255,0,0.1)' : 'transparent',
@@ -205,6 +205,42 @@ export default function ApplicationTracker() {
                       <textarea value={app.notes || ''} onChange={e => updateApp(app.id, 'notes', e.target.value)}
                         placeholder="Бележки..." rows={2}
                         style={{ width: '100%', padding: '6px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 5, fontSize: 11, fontFamily: 'inherit', resize: 'vertical', marginBottom: 6, background: '#0A0A0B', color: '#A1A1AA' }} />
+
+                      {/* Per-app document checklist */}
+                      <div style={{ marginBottom: 8, paddingTop: 6 }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: '#71717A', textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.05em' }}>Документи за тази кандидатура</div>
+                        {(() => {
+                          const appDocs = app.documents || {};
+                          const required = docChecklist.filter(d => d.id !== 'portfolio' || ['Дизайн', 'Архитектура', 'Изкуства'].some(f => (app.program || '').includes(f)));
+                          const ready = required.filter(d => appDocs[d.id]).length;
+                          return <>
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                              <span style={{ fontSize: 10, color: ready === required.length ? '#22C55E' : '#F59E0B', fontWeight: 600 }}>{ready}/{required.length}</span>
+                              <div style={{ flex: 1, height: 4, background: '#1E1E21', borderRadius: 2, overflow: 'hidden' }}>
+                                <div style={{ height: '100%', background: ready === required.length ? '#22C55E' : '#F59E0B', borderRadius: 2, width: `${(ready / required.length) * 100}%`, transition: 'width .3s' }} />
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                              {required.map(d => {
+                                const done = appDocs[d.id];
+                                return (
+                                  <button key={d.id} onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newDocs = { ...appDocs, [d.id]: !done };
+                                    updateApp(app.id, 'documents', newDocs);
+                                  }} style={{
+                                    padding: '4px 10px', borderRadius: 100, fontSize: 10, fontWeight: 500,
+                                    background: done ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.04)',
+                                    border: `1px solid ${done ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                                    color: done ? '#22C55E' : '#71717A', cursor: 'pointer', fontFamily: 'inherit',
+                                  }}>{done ? '✓' : '○'} {d.label.replace(/^.+\s/, '')}</button>
+                                );
+                              })}
+                            </div>
+                          </>;
+                        })()}
+                      </div>
+
                       <button onClick={() => removeApp(app.id)} style={{ fontSize: 10, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>🗑️ Премахни</button>
                     </div>
                   )}
@@ -225,6 +261,157 @@ export default function ApplicationTracker() {
           </>
         )}
       </>}
+
+      {/* ═══ ROADMAP TAB ═══ */}
+      {view === 'roadmap' && (
+        <div>
+          {apps.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <div style={{ fontSize: 48, marginBottom: 10 }}>🗺️</div>
+              <p style={{ color: '#71717A', fontSize: 13 }}>Добави кандидатури, за да генерираш персонализиран roadmap.</p>
+              <Btn accent onClick={() => setView('tracker')} sm style={{ marginTop: 10 }}>📋 Към кандидатури</Btn>
+            </div>
+          ) : (
+            <div>
+              <p style={{ color: '#71717A', fontSize: 12, marginBottom: 16 }}>
+                Автоматичен план базиран на {apps.length} кандидатур{apps.length > 1 ? 'и' : 'а'}
+              </p>
+              {(() => {
+                // Generate milestones from apps
+                const now = new Date();
+                const milestones = [];
+
+                // Phase 1: Research (for idea/research status apps)
+                const researchApps = apps.filter(a => a.status === 'idea' || a.status === 'research');
+                if (researchApps.length > 0) {
+                  milestones.push({
+                    phase: 'Проучване',
+                    icon: '🔍',
+                    color: '#5D5FEF',
+                    done: researchApps.length === 0,
+                    items: researchApps.map(a => ({
+                      text: `Проучи ${a.uni} — ${a.program}`,
+                      done: a.status !== 'idea',
+                      app: a,
+                    })),
+                  });
+                }
+
+                // Phase 2: Documents
+                const docsNeeded = apps.filter(a => ['idea', 'research', 'docs'].includes(a.status));
+                const globalDocsReady = Object.values(docs).filter(Boolean).length;
+                if (docsNeeded.length > 0 || globalDocsReady < 6) {
+                  milestones.push({
+                    phase: 'Документи',
+                    icon: '📄',
+                    color: '#F59E0B',
+                    done: globalDocsReady >= 6 && docsNeeded.length === 0,
+                    items: [
+                      { text: `Основни документи: ${globalDocsReady}/10 готови`, done: globalDocsReady >= 6 },
+                      ...docChecklist.filter(d => !docs[d.id]).slice(0, 4).map(d => ({
+                        text: d.label.replace(/^.+\s/, ''),
+                        done: false,
+                      })),
+                    ],
+                  });
+                }
+
+                // Phase 3: Apply (per app with deadline)
+                const toApply = apps.filter(a => ['idea', 'research', 'docs'].includes(a.status));
+                if (toApply.length > 0) {
+                  milestones.push({
+                    phase: 'Кандидатстване',
+                    icon: '📤',
+                    color: '#818CF8',
+                    done: toApply.length === 0,
+                    items: toApply
+                      .sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999'))
+                      .map(a => {
+                        const dl = a.deadline ? new Date(a.deadline) : null;
+                        const days = dl ? Math.ceil((dl - now) / (1000*60*60*24)) : null;
+                        return {
+                          text: `${a.emoji} ${a.uni}${dl ? ` — до ${dl.toLocaleDateString('bg-BG')}` : ''}`,
+                          done: false,
+                          urgent: days !== null && days <= 14,
+                          daysLeft: days,
+                          app: a,
+                        };
+                      }),
+                  });
+                }
+
+                // Phase 4: Waiting
+                const waiting = apps.filter(a => a.status === 'applied');
+                if (waiting.length > 0) {
+                  milestones.push({
+                    phase: 'Изчакване на отговор',
+                    icon: '⏳',
+                    color: '#14B8A6',
+                    done: false,
+                    items: waiting.map(a => ({ text: `${a.emoji} ${a.uni} — ${a.program}`, done: false })),
+                  });
+                }
+
+                // Phase 5: Decision
+                const accepted = apps.filter(a => a.status === 'accepted');
+                if (accepted.length > 0) {
+                  milestones.push({
+                    phase: 'Избор на оферта',
+                    icon: '🎓',
+                    color: '#22C55E',
+                    done: false,
+                    items: accepted.map(a => ({ text: `${a.emoji} ${a.uni} — ПРИЕТ!`, done: true })),
+                  });
+                }
+
+                return milestones.map((m, mi) => (
+                  <div key={mi} style={{ marginBottom: 20, position: 'relative', paddingLeft: 28 }}>
+                    {/* Timeline line */}
+                    {mi < milestones.length - 1 && (
+                      <div style={{ position: 'absolute', left: 13, top: 28, bottom: -12, width: 2, background: m.done ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.06)' }} />
+                    )}
+                    {/* Phase dot */}
+                    <div style={{
+                      position: 'absolute', left: 4, top: 2, width: 20, height: 20, borderRadius: '50%',
+                      background: m.done ? '#22C55E' : m.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10, boxShadow: m.done ? '0 0 8px rgba(34,197,94,0.4)' : `0 0 8px ${m.color}33`,
+                    }}>{m.done ? '✓' : m.icon}</div>
+                    {/* Phase content */}
+                    <div style={{ fontSize: 14, fontWeight: 600, color: m.done ? '#22C55E' : '#FFFFFF', marginBottom: 8 }}>
+                      {m.phase}
+                    </div>
+                    <div style={{ display: 'grid', gap: 4 }}>
+                      {m.items.map((item, ii) => (
+                        <div key={ii} style={{
+                          display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px',
+                          background: item.done ? 'rgba(34,197,94,0.08)' : item.urgent ? 'rgba(245,158,11,0.08)' : '#161618',
+                          border: `1px solid ${item.done ? 'rgba(34,197,94,0.2)' : item.urgent ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                          borderRadius: 8, fontSize: 11,
+                        }}>
+                          <span style={{ color: item.done ? '#22C55E' : '#71717A', fontSize: 12, flexShrink: 0 }}>
+                            {item.done ? '✅' : '○'}
+                          </span>
+                          <span style={{ color: item.done ? '#22C55E' : '#A1A1AA', flex: 1, textDecoration: item.done ? 'line-through' : 'none' }}>
+                            {item.text}
+                          </span>
+                          {item.daysLeft != null && (
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, flexShrink: 0,
+                              color: item.daysLeft < 0 ? '#EF4444' : item.urgent ? '#F59E0B' : '#71717A',
+                            }}>
+                              {item.daysLeft < 0 ? 'Изтекъл!' : `${item.daysLeft}д`}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ═══ CALENDAR TAB ═══ */}
       {view === 'calendar' && (

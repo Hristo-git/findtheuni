@@ -12,6 +12,8 @@ import PeerChat from './components/PeerChat';
 import OnboardingWizard from './components/OnboardingWizard';
 import ProgramExplorer from './components/ProgramExplorer';
 import B2BPage from './components/B2BPage';
+import CostCalculator from './components/CostCalculator';
+import DecisionHelper from './components/DecisionHelper';
 import JourneyBar from './components/JourneyBar';
 import { useUser } from './UserContext';
 import { calcMatch, getRecommendedUnis } from './utils/matching';
@@ -150,7 +152,7 @@ export default function App() {
             <span className="grad-text">FindTheUni</span>
           </div>
           <div style={{ display: "flex", gap: 2, overflowX: "auto", padding: "4px 0" }}>
-            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["programs", "📚"], ["guides", "🌍"], ["scholarships", "🎯"], ["tracker", "📝"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
+            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["programs", "📚"], ["guides", "🌍"], ["scholarships", "🎯"], ["cost", "💰"], ["tracker", "📝"], ["decision", "🤔"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
               <button key={k} onClick={() => nv(k)} style={{ padding: "6px 12px", borderRadius: 100, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#CCFF00" : "#71717A", background: pg === k ? "rgba(204,255,0,0.1)" : "transparent", border: "none", flexShrink: 0 }}>{icon}</button>
             )}
           </div>
@@ -230,6 +232,7 @@ export default function App() {
               { i: "🗺️", t: "Карта на Европа", d: "Интерактивна карта с всички университети.", click: () => nv("browse") },
               { i: "🌍", t: "Гайдове", d: "15 държави — виза, жилище, работа.", click: () => nv("guides") },
               { i: "🎯", t: "Стипендии", d: "Erasmus+, DAAD, Chevening и други.", click: () => nv("scholarships") },
+              { i: "💰", t: "Калкулатор", d: "Разходи, стипендии, бюджет.", click: () => nv("cost") },
               { i: "📝", t: "Tracker", d: "Следи кандидатури и дедлайни.", click: () => nv("tracker") },
               { i: "🌟", t: "Отзиви", d: "Мнения от студенти в чужбина.", click: () => nv("reviews") },
               { i: "💬", t: "Peer Чат", d: "Питай студенти-амбасадори.", click: () => nv("peers") },
@@ -360,11 +363,14 @@ export default function App() {
                 {sl.programs.map((p, i) => <span key={i} style={{ padding: "7px 16px", borderRadius: 100, fontSize: 13, background: "rgba(93,95,239,0.1)", color: "#818CF8" }}>{p}</span>)}
               </div>
             </div>}
-            {tab === "cost" && <Card>
-              {[["🏠 Наем:", `€${Math.round(sl.costOfLiving * 0.55)}/мес`], ["🍕 Храна:", `€${Math.round(sl.costOfLiving * 0.25)}/мес`], ["🚌 Транспорт:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["📱 Други:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["📊 Общо:", `≈ €${sl.costOfLiving}/мес`]].map(([l, v], i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.06)" : "none", fontSize: 14 }}>
-                <span style={{ color: "#71717A" }}>{l}</span><span style={{ fontWeight: i === 4 ? 700 : 500, color: i === 4 ? "#CCFF00" : "#fff" }}>{v}</span>
-              </div>)}
-            </Card>}
+            {tab === "cost" && <div>
+              <Card style={{ marginBottom: 12 }}>
+                {[["🏠 Наем:", `€${Math.round(sl.costOfLiving * 0.55)}/мес`], ["🍕 Храна:", `€${Math.round(sl.costOfLiving * 0.25)}/мес`], ["🚌 Транспорт:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["📱 Други:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["📊 Общо:", `≈ €${sl.costOfLiving}/мес`]].map(([l, v], i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.06)" : "none", fontSize: 14 }}>
+                  <span style={{ color: "#71717A" }}>{l}</span><span style={{ fontWeight: i === 4 ? 700 : 500, color: i === 4 ? "#CCFF00" : "#fff" }}>{v}</span>
+                </div>)}
+              </Card>
+              <Btn ghost sm onClick={() => nv("cost")}>💰 Пълен калкулатор →</Btn>
+            </div>}
             <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
               <Btn primary onClick={() => { user.addApplication({ uniId: sl.id, uni: sl.nameEn, country: sl.country, program: sl.programs[0] || 'General', emoji: sl.emoji }); nv("tracker"); }}>📤 Кандидатствай</Btn>
               <Btn accent onClick={() => tc(sl.id)} sm>{cm.includes(sl.id) ? "✓ В сравнението" : "📊 Сравни"}</Btn>
@@ -457,6 +463,8 @@ export default function App() {
           onBrowseUni={(u) => { sL(u); nv("browse"); sTab("info"); }}
           onBrowseCountry={(countryName) => { sF({ ...ft, c: countryName }); sSf(true); nv("browse"); }}
         />}
+        {pg === "cost" && <CostCalculator onNavigate={nv} />}
+        {pg === "decision" && <DecisionHelper onNavigate={nv} />}
         {pg === "tracker" && <ApplicationTracker />}
         {pg === "reviews" && <div style={{ padding: "32px 0" }}><StudentReviews /></div>}
         {pg === "peers" && <PeerChat />}
