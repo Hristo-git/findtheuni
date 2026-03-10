@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { countryGuides, destQuestions } from '../data/countryData.js';
 import { universities } from '../data/universities.js';
 import { Btn, Card } from './UI.jsx';
+import { useUser } from '../UserContext.jsx';
+import { getRankedCountries } from '../utils/matching.js';
 
 // ─── DESTINATION QUIZ ─────────────────────────
 function DestQuiz({ onFinish }) {
@@ -209,16 +211,20 @@ function CountryDetail({ guide, onBack, onBrowse }) {
 
 // ─── MAIN EXPORT ──────────────────────────────
 export default function CountryGuidesPage({ onBrowseUni }) {
+  const { profile } = useUser();
   const [mode, setMode] = useState('list'); // list | quiz | quizResults | detail
   const [selectedGuide, setSelectedGuide] = useState(null);
   const [quizResults, setQuizResults] = useState(null);
   const [search, setSearch] = useState('');
 
+  const rankedCountries = useMemo(() => getRankedCountries(profile), [profile]);
+
   const filtered = useMemo(() => {
-    if (!search) return countryGuides;
+    const base = profile.onboarded ? rankedCountries : countryGuides;
+    if (!search) return base;
     const s = search.toLowerCase();
-    return countryGuides.filter(g => g.name.toLowerCase().includes(s) || g.lang.toLowerCase().includes(s));
-  }, [search]);
+    return base.filter(g => g.name.toLowerCase().includes(s) || g.lang.toLowerCase().includes(s));
+  }, [search, profile.onboarded, rankedCountries]);
 
   const viewGuide = (id) => {
     setSelectedGuide(countryGuides.find(g => g.id === id));
@@ -266,6 +272,14 @@ export default function CountryGuidesPage({ onBrowseUni }) {
           style={{ width: '100%', padding: '9px 10px 9px 32px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', background: '#0A0A0B', color: '#A1A1AA', outline: 'none' }} />
       </div>
 
+      {/* Profile-based recommendation hint */}
+      {profile.onboarded && !search && (
+        <div style={{ padding: '10px 16px', borderRadius: 10, background: 'rgba(93,95,239,0.08)', border: '1px solid rgba(93,95,239,0.2)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 16 }}>✨</span>
+          <span style={{ fontSize: 12, color: '#818CF8', fontWeight: 600 }}>Държавите са подредени по съвместимост с профила ти (бюджет €{profile.budget || '?'}, {profile.langPref === 'en' ? 'английски' : profile.langPref === 'de' ? 'немски' : profile.langPref === 'fr' ? 'френски' : 'местен език'})</span>
+        </div>
+      )}
+
       {/* Country cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 10 }}>
         {filtered.map((g, i) => (
@@ -273,10 +287,16 @@ export default function CountryGuidesPage({ onBrowseUni }) {
             style={{ cursor: 'pointer', padding: '16px 18px', animation: `slideIn .3s ease-out ${i * 0.03}s both` }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <span style={{ fontSize: 28 }}>{g.flag}</span>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF' }}>{g.name}</div>
                 <div style={{ fontSize: 10, color: '#71717A' }}>🗣️ {g.lang} · {g.climate}</div>
               </div>
+              {g.matchScore != null && (
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, fontFamily: "'Space Grotesk',sans-serif", color: g.matchScore >= 70 ? '#CCFF00' : g.matchScore >= 50 ? '#818CF8' : '#71717A' }}>{g.matchScore}%</div>
+                  <div style={{ fontSize: 8, color: '#71717A' }}>съвпадение</div>
+                </div>
+              )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 11, color: '#71717A', marginBottom: 8 }}>
               <span>💰 ~€{g.cost}/мес</span>

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { scholarships } from '../data/testData';
 import { Btn, Card } from './UI';
 import { useUser } from '../UserContext';
+import { checkScholarshipEligibility } from '../utils/matching';
 
 export default function ScholarshipFinder() {
   const { profile } = useUser();
@@ -67,13 +68,24 @@ export default function ScholarshipFinder() {
 
       {/* Scholarship Cards */}
       <div style={{ display: 'grid', gap: 10 }}>
-        {filtered.map((sc, i) => (
-          <Card key={sc.id} style={{ padding: '16px 18px', animation: `slideIn .4s ease-out ${i * 0.04}s both` }}>
+        {filtered.map((sc, i) => {
+          const elig = profile.onboarded ? checkScholarshipEligibility(sc, profile) : null;
+          return (
+          <Card key={sc.id} style={{ padding: '16px 18px', animation: `slideIn .4s ease-out ${i * 0.04}s both`, borderColor: elig?.eligible ? 'rgba(34,197,94,0.3)' : undefined }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 24 }}>{sc.flag}</span>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF' }}>{sc.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF' }}>{sc.name}</span>
+                    {elig && (
+                      <span style={{ padding: '1px 8px', borderRadius: 100, fontSize: 9, fontWeight: 600,
+                        background: elig.eligible ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                        color: elig.eligible ? '#22C55E' : '#EF4444' }}>
+                        {elig.eligible ? '✅ Допустим' : '❌ Несъвместим'}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 11, color: '#71717A' }}>{sc.country}</div>
                 </div>
               </div>
@@ -82,6 +94,11 @@ export default function ScholarshipFinder() {
                 <div style={{ fontSize: 10, color: '#71717A' }}>Дедлайн: {sc.deadline}</div>
               </div>
             </div>
+            {elig && !elig.eligible && elig.reasons.length > 0 && (
+              <div style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.06)', marginBottom: 6, fontSize: 10, color: '#EF4444' }}>
+                {elig.reasons.join(' · ')}
+              </div>
+            )}
             <p style={{ fontSize: 12, color: '#71717A', lineHeight: 1.5, marginBottom: 8 }}>{sc.desc}</p>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -91,7 +108,8 @@ export default function ScholarshipFinder() {
               <a href={`https://${sc.url}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#CCFF00', fontWeight: 500, textDecoration: 'none' }}>Сайт →</a>
             </div>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (

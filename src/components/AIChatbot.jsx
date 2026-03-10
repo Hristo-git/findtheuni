@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Anthropic from '@anthropic-ai/sdk';
 import { chatPatterns } from '../data/chatData';
 import { universities, fieldEmoji } from '../data/universities';
+import { useUser } from '../UserContext';
 
 // Browser-direct Claude call (key embedded at build time via VITE_ANTHROPIC_API_KEY)
 const BROWSER_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
@@ -23,18 +24,20 @@ ${universities.map(u => `${u.emoji} ${u.nameEn} | ${u.country}, ${u.city} | #${u
 • Срокове: UK-UCAS 15 яну; Германия 1–15 юли; Нидерландия 1 май; Швеция 15 яну; Норвегия 15 апр; ETH/EPFL 30 апр; Финландия 20 яну; Ирландия 1 фев
 • Стипендии: Erasmus+ €800–1200/мес; DAAD €934/мес; Chevening (UK пълна); SI Scholarship (SE); Eiffel €1181/мес (FR)`;
 
-async function getAIReply(userMsg, history) {
+async function getAIReply(userMsg, history, profileContext = '') {
   const messages = [
     ...history.slice(-8).map(m => ({ role: m.from === 'user' ? 'user' : 'assistant', content: m.text })),
     { role: 'user', content: userMsg },
   ];
+
+  const systemPrompt = AI_SYSTEM + profileContext;
 
   // 1. Browser-direct (no server needed — for Netlify/static hosting)
   if (anthropic) {
     const resp = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 450,
-      system: AI_SYSTEM,
+      system: systemPrompt,
       messages,
     });
     return resp.content[0].text;
@@ -463,9 +466,44 @@ function formatMsg(text) {
   });
 }
 
-export default function AIChatbot({ isOpen, onClose }) {
+function getJourneyGreeting(profile) {
+  if (!profile.onboarded) return "Здравей! 👋 Аз съм AI съветникът на Find The Uni. Питай ме за университети, стипендии, програми или страни. Как мога да помогна?";
+
+  const name = profile.level ? (profile.level === 'bachelor' ? 'бакалавър' : profile.level === 'master' ? 'магистър' : 'докторат') : null;
+  const fields = profile.fields?.slice(0, 2).join(', ');
+  const budget = profile.budget;
+
+  let greeting = `Здравей! 👋 Виждам, че търсиш${name ? ` ${name}` : ''}${fields ? ` в ${fields}` : ''}${budget ? ` с бюджет €${budget}/мес` : ''}.`;
+
+  // Suggest next step based on journey
+  if (!profile.ripiasec && !profile.hollandCode) greeting += '\n\n💡 Съвет: Направи RIASEC теста, за да разбереш кои области ти подхождат!';
+  else if (!profile.targetCountries?.length && !profile.favorites?.length) greeting += '\n\n💡 Съвет: Разгледай гайдовете по държави, за да избереш дестинация!';
+  else if (profile.favorites?.length > 0 && (!profile.applications || profile.applications.length === 0)) greeting += `\n\n💡 Имаш ${profile.favorites.length} любими университета. Готов ли си да започнеш кандидатстване?`;
+
+  greeting += '\n\nКак мога да помогна?';
+  return greeting;
+}
+
+function buildJourneySystemContext(profile) {
+  if (!profile.onboarded) return '';
+  const parts = [];
+  if (profile.level) parts.push(`Ниво: ${profile.level}`);
+  if (profile.langPref) parts.push(`Език: ${profile.langPref}`);
+  if (profile.budget) parts.push(`Бюджет: €${profile.budget}/мес`);
+  if (profile.fields?.length) parts.push(`Области: ${profile.fields.join(', ')}`);
+  if (profile.gpa) parts.push(`GPA: ${profile.gpa}`);
+  if (profile.startDate) parts.push(`Начало: ${profile.startDate}`);
+  if (profile.favorites?.length) parts.push(`Любими университети: ${profile.favorites.length}`);
+  if (profile.applications?.length) parts.push(`Кандидатури: ${profile.applications.length}`);
+  if (profile.hollandCode) parts.push(`Holland код: ${profile.hollandCode}`);
+  return parts.length > 0 ? `\n\nПРОФИЛ НА ПОТРЕБИТЕЛЯ:\n${parts.join(' · ')}` : '';
+}
+
+export default function AIChatbot({ isOpen, onClose, profile: propProfile }) {
+  const userCtx = useUser();
+  const profile = propProfile || userCtx?.profile || {};
   const [msgs, setMsgs] = useState([
-    { from: 'ai', text: "Здравей! 👋 Аз съм AI съветникът на Read More. Питай ме за университети, стипендии, програми или страни. Как мога да помогна?" }
+    { from: 'ai', text: getJourneyGreeting(profile) }
   ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -475,6 +513,8 @@ export default function AIChatbot({ isOpen, onClose }) {
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
   useEffect(() => { if (isOpen) inputRef.current?.focus(); }, [isOpen]);
 
+  const profileContext = useMemo(() => buildJourneySystemContext(profile), [profile]);
+
   const send = (overrideMsg) => {
     const userMsg = (overrideMsg || input).trim();
     if (!userMsg) return;
@@ -482,7 +522,7 @@ export default function AIChatbot({ isOpen, onClose }) {
     setMsgs(prev => {
       const next = [...prev, { from: 'user', text: userMsg }];
       setTyping(true);
-      getAIReply(userMsg, next)
+      getAIReply(userMsg, next, profileContext)
         .then(reply => setMsgs(p => [...p, { from: 'ai', text: reply }]))
         .catch(() => setMsgs(p => [...p, { from: 'ai', text: getReply(userMsg, next) }]))
         .finally(() => setTyping(false));

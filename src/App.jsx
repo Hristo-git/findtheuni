@@ -13,34 +13,9 @@ import OnboardingWizard from './components/OnboardingWizard';
 import B2BPage from './components/B2BPage';
 import JourneyBar from './components/JourneyBar';
 import { useUser } from './UserContext';
+import { calcMatch, getRecommendedUnis } from './utils/matching';
 
 const cls = ["#CCFF00", "#5D5FEF", "#22C55E", "#F59E0B", "#EF4444", "#14B8A6"];
-
-function calcMatch(u, profile) {
-  if (!profile.onboarded) return null;
-  let score = 0, max = 0;
-  if (profile.fields.length > 0) {
-    const overlap = u.fields.filter(f => profile.fields.includes(f)).length;
-    score += (overlap / Math.max(profile.fields.length, 1)) * 30;
-  } else score += 15;
-  max += 30;
-  if (profile.budget > 0) {
-    const monthlyTotal = u.costOfLiving + (u.tuition[0] / 12);
-    score += monthlyTotal <= profile.budget ? 25 : monthlyTotal <= profile.budget * 1.3 ? 15 : 5;
-  } else score += 12;
-  max += 25;
-  if (profile.langPref === 'en') score += u.international > 15 ? 20 : 10;
-  else if (profile.langPref === 'de') score += ['Германия','Австрия','Швейцария'].includes(u.country) ? 20 : 5;
-  else if (profile.langPref === 'fr') score += ['Франция','Швейцария','Белгия'].includes(u.country) ? 20 : 5;
-  else if (profile.langPref === 'local') score += u.tuition[0] === 0 ? 20 : 10;
-  else score += 10;
-  max += 20;
-  score += u.rank <= 100 ? 15 : u.rank <= 300 ? 12 : u.rank <= 600 ? 8 : 4;
-  max += 15;
-  score += (u.employability / 100) * 10;
-  max += 10;
-  return Math.round((score / max) * 100);
-}
 
 function getNextActions(profile) {
   const actions = [];
@@ -409,6 +384,47 @@ export default function App() {
               </div>
             </div>
             <p style={{ color: "#71717A", fontSize: 14, marginBottom: 16 }}>{ls.length} резултата</p>
+
+            {/* Recommended for you — shows when no filters/search active */}
+            {profile.onboarded && !sr && !ft.c && !ft.f && !mapMode && (() => {
+              const recs = getRecommendedUnis(profile, 5);
+              return recs.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: '#CCFF00', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 16 }}>🎯</span> Препоръчани за теб
+                    </div>
+                    <span style={{ fontSize: 10, color: '#71717A' }}>Базирано на профила ти</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
+                    {recs.map((u, i) => (
+                      <Card key={u.id} onClick={() => { sL(u); sTab("info"); }} style={{
+                        cursor: 'pointer', padding: '14px 16px', minWidth: 200, flexShrink: 0,
+                        background: 'rgba(204,255,0,0.04)', border: '1px solid rgba(204,255,0,0.15)',
+                        animation: `scaleIn .3s ease-out ${i * 0.06}s both`,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 20 }}>{u.emoji}</span>
+                          <div style={{
+                            width: 28, height: 28, borderRadius: '50%',
+                            background: u.matchScore >= 75 ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 10, fontWeight: 700,
+                            color: u.matchScore >= 75 ? '#22C55E' : '#F59E0B',
+                          }}>{u.matchScore}%</div>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', marginBottom: 2 }}>{u.nameEn}</div>
+                        <div style={{ fontSize: 10, color: '#71717A' }}>📍{u.city} · 🏆#{u.rank}</div>
+                        <div style={{ fontSize: 10, color: '#A1A1AA', marginTop: 3 }}>
+                          {u.tuition[0] === 0 ? '🎉 Безпл.' : `💶 €${u.tuition[0]}`} · €{u.costOfLiving}/мес
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {mapMode && <div style={{ marginBottom: 18 }}><EuropeMap onSelectUni={u => { sL(u); sTab("info"); setMap(false); }} filters={{ c: ft.c, field: ft.f }} /></div>}
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
