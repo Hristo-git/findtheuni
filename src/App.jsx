@@ -451,7 +451,10 @@ export default function App() {
         </div>}
 
         {pg === "scholarships" && <div style={{ padding: "32px 0" }}><ScholarshipFinder /></div>}
-        {pg === "guides" && <CountryGuidesPage onBrowseUni={(u) => { sL(u); nv("browse"); sTab("info"); }} />}
+        {pg === "guides" && <CountryGuidesPage
+          onBrowseUni={(u) => { sL(u); nv("browse"); sTab("info"); }}
+          onBrowseCountry={(countryName) => { sF({ ...ft, c: countryName }); sSf(true); nv("browse"); }}
+        />}
         {pg === "tracker" && <ApplicationTracker />}
         {pg === "reviews" && <div style={{ padding: "32px 0" }}><StudentReviews /></div>}
         {pg === "peers" && <PeerChat />}

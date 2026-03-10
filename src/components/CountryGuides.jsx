@@ -117,7 +117,7 @@ function QuizResults({ results, onViewGuide, onRetake }) {
 }
 
 // ─── SINGLE COUNTRY GUIDE ─────────────────────
-function CountryDetail({ guide, onBack, onBrowse }) {
+function CountryDetail({ guide, onBack, onBrowse, onBrowseCountry }) {
   const countryUnis = universities.filter(u => u.country === guide.name).sort((a, b) => a.rank - b.rank);
 
   const sections = [
@@ -195,7 +195,7 @@ function CountryDetail({ guide, onBack, onBrowse }) {
       {/* Universities in this country */}
       {countryUnis.length > 0 && <>
         <h3 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 16, marginBottom: 8, color: '#FFFFFF' }}>🎓 Университети в {guide.name} ({countryUnis.length})</h3>
-        {countryUnis.map((u, i) => (
+        {countryUnis.slice(0, 3).map((u, i) => (
           <Card key={u.id} onClick={() => onBrowse(u)} style={{ cursor: 'pointer', padding: '10px 14px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10, animation: `slideIn .3s ease-out ${i * 0.04}s both` }}>
             <span style={{ fontSize: 18 }}>{u.emoji}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -205,12 +205,34 @@ function CountryDetail({ guide, onBack, onBrowse }) {
           </Card>
         ))}
       </>}
+
+      {/* ── Next-step CTA ─────────────────────────── */}
+      <div style={{
+        position: 'sticky', bottom: 16, marginTop: 24,
+        background: 'linear-gradient(135deg, rgba(204,255,0,0.12), rgba(93,95,239,0.12))',
+        border: '1px solid rgba(204,255,0,0.3)',
+        borderRadius: 16, padding: '18px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+      }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#FFFFFF', fontFamily: "'Space Grotesk',sans-serif" }}>Готов да разгледаш университетите?</div>
+          <div style={{ fontSize: 11, color: '#71717A', marginTop: 2 }}>{countryUnis.length} университета в {guide.name} · с програми и Match %</div>
+        </div>
+        <button onClick={() => onBrowseCountry(guide.name)} style={{
+          padding: '12px 20px', borderRadius: 100,
+          background: '#CCFF00', color: '#0A0A0B',
+          border: 'none', fontWeight: 700, fontSize: 13,
+          fontFamily: "'Space Grotesk',sans-serif", cursor: 'pointer',
+          flexShrink: 0, whiteSpace: 'nowrap',
+        }}>🎓 Виж всички →</button>
+      </div>
     </div>
   );
 }
 
 // ─── MAIN EXPORT ──────────────────────────────
-export default function CountryGuidesPage({ onBrowseUni }) {
+export default function CountryGuidesPage({ onBrowseUni, onBrowseCountry }) {
   const { profile } = useUser();
   const [mode, setMode] = useState('list'); // list | quiz | quizResults | detail
   const [selectedGuide, setSelectedGuide] = useState(null);
@@ -250,7 +272,7 @@ export default function CountryGuidesPage({ onBrowseUni }) {
 
   if (mode === 'detail' && selectedGuide) return (
     <div style={{ padding: '32px 0' }}>
-      <CountryDetail guide={selectedGuide} onBack={() => setMode('list')} onBrowse={onBrowseUni} />
+      <CountryDetail guide={selectedGuide} onBack={() => setMode('list')} onBrowse={onBrowseUni} onBrowseCountry={onBrowseCountry} />
     </div>
   );
 
