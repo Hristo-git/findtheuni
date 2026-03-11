@@ -75,23 +75,23 @@ export function UserProvider({ children }) {
     }
   }, [profile]);
 
-  // Auto-compute journey stages (sequential)
+  // Auto-compute journey stages (NON-sequential — each stage unlocks independently)
   const completedStages = useMemo(() => {
     const checks = {
       profile: profile.onboarded,
       career: profile.riasecDone,
-      countries: !!profile.quizResults || (profile.targetCountries?.length > 0),
-      universities: profile.favorites.length >= 1,
-      programs: (profile.savedPrograms?.length || 0) > 0,
+      // Countries: done quiz OR set a preferred country in onboarding OR has browsed enough
+      countries: !!profile.quizResults || (profile.targetCountries?.length > 0)
+        || !!profile.country || profile.favorites.length >= 1,
+      // Universities: added at least 3 favorites
+      universities: profile.favorites.length >= 3,
+      // Programs: saved a program or has 3+ favorites (they've explored programs)
+      programs: (profile.savedPrograms?.length || 0) > 0 || profile.favorites.length >= 5,
       planning: profile.applications.length > 0,
       applying: profile.applications.some(a => a.status === 'applied' || a.status === 'accepted'),
     };
-    const done = [];
-    for (const stage of JOURNEY_STAGES) {
-      if (checks[stage.id]) done.push(stage.id);
-      else break;
-    }
-    return done;
+    // Non-sequential: mark ALL completed stages, not just up to first incomplete
+    return JOURNEY_STAGES.filter(stage => checks[stage.id]).map(s => s.id);
   }, [profile]);
 
   const currentStage = useMemo(() => {

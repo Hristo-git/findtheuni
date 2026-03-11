@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { getEntitlements } from '../lib/entitlements.js';
 
-export default function AccountMenu({ email, plan, onSignOut, onReminders, onClose }) {
+export default function AccountMenu({ email, plan, onSignOut, onSignIn, onReminders, onReset, onClose }) {
+  const isGuest = !email;
   const ent = getEntitlements(plan);
 
   return (
@@ -19,7 +20,7 @@ export default function AccountMenu({ email, plan, onSignOut, onReminders, onClo
           Акаунт
         </div>
         <div style={{ fontSize: 14, color: '#fff', fontWeight: 500, marginBottom: 4 }}>
-          {email}
+          {isGuest ? 'Гост' : email}
         </div>
         <div style={{
           display: 'inline-block', fontSize: 10, fontWeight: 700,
@@ -33,7 +34,12 @@ export default function AccountMenu({ email, plan, onSignOut, onReminders, onClo
 
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
           <MenuBtn icon="⏰" label="Напомняния" onClick={onReminders} />
-          <MenuBtn icon="🚪" label="Излез" onClick={onSignOut} danger />
+          <MenuBtn icon="🔄" label="Нулирай профила" onClick={onReset} />
+          {isGuest ? (
+            <MenuBtn icon="🔐" label="Влез" onClick={onSignIn} />
+          ) : (
+            <MenuBtn icon="🚪" label="Излез" onClick={onSignOut} danger />
+          )}
         </div>
       </div>
     </div>

@@ -25,6 +25,8 @@ import { useAuthState } from './hooks/useAuthState';
 import { migrateLocalToCloud, loadRemoteProfile, ensureUserProfile, getUserPlan } from './lib/profileSync';
 import { track, Events } from './lib/analytics';
 import { isAtLimit } from './lib/entitlements';
+import { useNavigate, useLocation } from 'react-router-dom';
+import css from './styles/App.module.css';
 
 // Parse natural language hero search into structured filters
 const FIELD_ALIASES = {
@@ -92,6 +94,35 @@ function parseHeroSearch(query) {
   return { country, field, remainder };
 }
 
+// AI Match explanation generator
+function getMatchExplanation(u, profile) {
+  if (!profile.onboarded) return null;
+  const reasons = [];
+  if (profile.langPref === 'en' && (u.country === 'UK' || u.country === 'Ирландия' || u.languages?.includes('Английски')))
+    reasons.push('преподава на английски');
+  if (profile.fields?.length && profile.fields.some(f => u.fields.includes(f)))
+    reasons.push(`предлага ${profile.fields.filter(f => u.fields.includes(f))[0]}`);
+  if (profile.budget && u.costOfLiving <= profile.budget)
+    reasons.push(`във бюджета ти (€${profile.budget}/мес)`);
+  if (u.tuition[0] === 0) reasons.push('безплатно обучение');
+  if (reasons.length === 0) return null;
+  return `Съвпада защото ${reasons.slice(0, 2).join(' и ')}.`;
+}
+
+// Skeleton loader component for university list
+function SkeletonUniRow() {
+  return (
+    <div className={css.skeletonUniRow}>
+      <div className={`${css.skeleton} ${css.skeletonCircle}`} />
+      <div>
+        <div className={`${css.skeleton} ${css.skeletonLine}`} style={{ width: '70%' }} />
+        <div className={`${css.skeleton} ${css.skeletonLine}`} style={{ width: '45%', height: 10, marginTop: 4 }} />
+      </div>
+      <div className={`${css.skeleton} ${css.skeletonLine}`} style={{ width: 60, height: 24, borderRadius: 100 }} />
+    </div>
+  );
+}
+
 const cls = ["#CCFF00", "#5D5FEF", "#22C55E", "#F59E0B", "#EF4444", "#14B8A6"];
 
 function getNextActions(profile) {
@@ -113,9 +144,17 @@ function getNextActions(profile) {
 export default function App() {
   const user = useUser();
   const { profile } = user;
-  const [pg, sP] = useState("home");
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Derive page from URL path — default to 'home'
+  const pathToPage = (path) => {
+    const p = path.replace(/^\//, '') || 'home';
+    return p;
+  };
+  const [pg, setPg] = useState(() => pathToPage(location.pathname));
   const [sr, sR] = useState("");
-  const [ft, sF] = useState({ c: "", f: "", s: "ranking", type: "", free: false });
+  const [ft, sF] = useState({ cs: [], fs: [], s: "ranking", type: "", free: false, minRating: 0, maxTuition: 20000 });
   const [sf, sSf] = useState(false);
   const [sl, sL] = useState(null);
   const [st, sSt] = useState(0);
@@ -139,6 +178,19 @@ export default function App() {
   const fav = profile.favorites;
   const tc = id => user.toggleCompare(id);
   const tf = id => { user.toggleFav(id); track(Events.UNIVERSITY_FAVORITED, { uniId: id }); };
+
+  // Navigation: update both state and URL
+  const sP = (page) => {
+    setPg(page);
+    const url = page === 'home' ? '/' : '/' + page;
+    if (location.pathname !== url) navigate(url, { replace: false });
+  };
+
+  // Sync browser back/forward buttons to pg state
+  useEffect(() => {
+    const currentPage = pathToPage(location.pathname);
+    if (currentPage !== pg) setPg(currentPage);
+  }, [location.pathname]);
 
   useEffect(() => { if (!profile.onboarded) setShowOnboarding(true); }, []);
   useEffect(() => { if (profile.riasecDone && profile.riasecScores) { sA(profile.riasecScores); sD(true); } }, []);
@@ -180,10 +232,13 @@ export default function App() {
   const ls = useMemo(() => {
     let l = [...universities];
     if (sr) { const s = sr.toLowerCase(); l = l.filter(u => u.name.toLowerCase().includes(s) || u.nameEn.toLowerCase().includes(s) || u.city.toLowerCase().includes(s) || u.country.toLowerCase().includes(s) || u.programs.some(p => p.toLowerCase().includes(s))); }
-    if (ft.c) l = l.filter(u => u.country === ft.c);
-    if (ft.f) l = l.filter(u => u.fields.includes(ft.f));
+    if (ft.cs?.length) l = l.filter(u => ft.cs.includes(u.country));
+    if (ft.fs?.length) l = l.filter(u => u.fields.some(f => ft.fs.includes(f)));
     if (ft.type) l = l.filter(u => u.type === ft.type);
     if (ft.free) l = l.filter(u => u.tuition[0] === 0);
+    // Advanced filters
+    if (ft.minRating > 0) l = l.filter(u => u.rating >= ft.minRating);
+    if (ft.maxTuition < 20000) l = l.filter(u => u.tuition[0] <= ft.maxTuition);
     if (ft.s === "match" && profile.onboarded) l.sort((a, b) => (calcMatch(b, profile) || 0) - (calcMatch(a, profile) || 0));
     else if (ft.s === "ranking") l.sort((a, b) => a.rank - b.rank);
     else if (ft.s === "rating") l.sort((a, b) => b.rating - a.rating);
@@ -241,28 +296,37 @@ export default function App() {
   const UniRow = ({ u }) => {
     const matchedProgs = sr ? u.programs.filter(p => p.toLowerCase().includes(sr.toLowerCase())) : [];
     const matchScore = calcMatch(u, profile);
+    const matchReason = matchScore >= 50 ? getMatchExplanation(u, profile) : null;
+    const badgeBg = matchScore >= 75 ? '#22C55E' : matchScore >= 50 ? '#F59E0B' : '#71717A';
     return (
-    <Card style={{ padding: "16px 18px", marginBottom: 10, cursor: "pointer", display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center" }}
-      onClick={() => { sL(u); if (pg !== "browse") nv("browse"); sTab("info"); }}>
-      <div style={{ position: "relative" }}>
-        <div style={{ width: 48, height: 48, borderRadius: 14, background: "rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{u.emoji}</div>
-        {matchScore !== null && <div style={{ position: "absolute", bottom: -3, right: -3, width: 22, height: 22, borderRadius: "50%", background: matchScore >= 75 ? "#22C55E" : matchScore >= 50 ? "#F59E0B" : "#71717A", color: "#0A0A0B", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, border: "2px solid #0A0A0B" }}>{matchScore}</div>}
+    <Card className={css.uniRow} onClick={() => { sL(u); if (pg !== 'browse') nv('browse'); sTab('info'); }}>
+      <div className={css.uniRowLogoWrap}>
+        <div className={css.uniRowLogo}>{u.emoji}</div>
+        {matchScore !== null && <div className={css.uniRowBadge} style={{ background: badgeBg }}>{matchScore}</div>}
       </div>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff" }}>{u.name}</div>
-        <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#71717A", flexWrap: "wrap", marginTop: 2 }}>
+        <div className={css.uniRowName}>{u.name}</div>
+        <div className={css.uniRowMeta}>
           <span>📍{u.city}, {u.country}</span><span>🏆#{u.rank}</span>
-          <span style={{ color: u.tuition[0] === 0 ? "#22C55E" : "#A1A1AA" }}>{u.tuition[0] === 0 && u.tuition[1] === 0 ? "🎉 Безпл." : `💶 €${u.tuition[0]}–${u.tuition[1]}`}</span>
+          <span style={{ color: u.tuition[0] === 0 ? '#22C55E' : '#A1A1AA' }}>
+            {u.tuition[0] === 0 && u.tuition[1] === 0 ? '🎉 Безпл.' : `💶 €${u.tuition[0]}–${u.tuition[1]}`}
+          </span>
         </div>
-        {matchedProgs.length > 0 && <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
-          {matchedProgs.slice(0, 3).map((p, i) => <span key={i} style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, background: "rgba(34,197,94,0.12)", color: "#22C55E" }}>🎓 {p}</span>)}
-          {matchedProgs.length > 3 && <span style={{ fontSize: 10, color: "#71717A" }}>+{matchedProgs.length - 3}</span>}
+        {matchedProgs.length > 0 && <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6 }}>
+          {matchedProgs.slice(0, 3).map((p, i) => <span key={i} style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, background: 'rgba(34,197,94,0.12)', color: '#22C55E' }}>🎓 {p}</span>)}
+          {matchedProgs.length > 3 && <span style={{ fontSize: 10, color: '#71717A' }}>+{matchedProgs.length - 3}</span>}
         </div>}
+        {matchReason && (
+          <div className={css.matchExplain}>
+            <span className={css.matchExplainIcon}>🧠</span>
+            <span>{matchReason}</span>
+          </div>
+        )}
       </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#F59E0B" }}>⭐{u.rating}</span>
-        <div onClick={e => { e.stopPropagation(); tf(u.id) }} style={{ fontSize: 18, cursor: "pointer" }}>{fav.includes(u.id) ? "❤️" : "🤍"}</div>
-        <div onClick={e => { e.stopPropagation(); tc(u.id) }} style={{ width: 22, height: 22, border: cm.includes(u.id) ? "none" : "2px solid rgba(255,255,255,0.15)", borderRadius: 7, background: cm.includes(u.id) ? "#5D5FEF" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{cm.includes(u.id) ? "✓" : ""}</div>
+      <div className={css.uniRowActions}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#F59E0B' }}>⭐{u.rating}</span>
+        <div onClick={e => { e.stopPropagation(); tf(u.id); }} style={{ fontSize: 18, cursor: 'pointer' }}>{fav.includes(u.id) ? '❤️' : '🤍'}</div>
+        <div onClick={e => { e.stopPropagation(); tc(u.id); }} style={{ width: 22, height: 22, border: cm.includes(u.id) ? 'none' : '2px solid rgba(255,255,255,0.15)', borderRadius: 7, background: cm.includes(u.id) ? '#5D5FEF' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'white', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{cm.includes(u.id) ? '✓' : ''}</div>
       </div>
     </Card>
   ); };
@@ -272,74 +336,81 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0A0A0B" }}>
+    <div className={css.shell}>
       {/* GLASSMORPHISM NAV */}
-      <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(10,10,11,0.8)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 20px" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 }}>
-          <div onClick={() => nv("home")} style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ width: 32, height: 32, borderRadius: 10, background: "#CCFF00", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🎓</span>
+      <div className={css.nav}>
+        <div className={css.navInner}>
+          <div onClick={() => nv('home')} className={css.navLogo}>
+            <span className={css.navLogoIcon}>🎓</span>
             <span className="grad-text">FindTheUni</span>
           </div>
-          <div style={{ display: "flex", gap: 2, overflowX: "auto", padding: "4px 0", flex: 1 }}>
-            {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["programs", "📚"], ["guides", "🌍"], ["scholarships", "🎯"], ["cost", "💰"], ["tracker", "📝"], ["decision", "🤔"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
-              <button key={k} onClick={() => nv(k)} style={{ padding: "6px 12px", borderRadius: 100, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#CCFF00" : "#71717A", background: pg === k ? "rgba(204,255,0,0.1)" : "transparent", border: "none", flexShrink: 0 }}>{icon}</button>
+          <div className={css.navTabs}>
+            {[['home', '🏠', 'Начало'], ['test', '🧠', 'Тест'], ['browse', '🎓', 'Универс.'], ['programs', '📚', 'Програми'], ['guides', '🌍', 'Гайдове'], ['scholarships', '🎯', 'Стипенд.'], ['cost', '💰', 'Бюджет'], ['tracker', '📝', 'Tracker'], ['decision', '🤔', 'Решение'], ['reviews', '🌟', 'Отзиви'], ['peers', '💬', 'Peers'], ['compare', '📊', 'Сравни'], ['dash', '📋', 'Табло']].map(([k, icon, label]) =>
+              <button key={k} onClick={() => nv(k)} className={`${css.navTab} ${pg === k ? css.navTabActive : ''}`}>
+                {icon} {label}
+              </button>
             )}
           </div>
           {/* Account button */}
           {auth.authAvailable && (
-            auth.isAuthenticated ? (
-              <button onClick={() => setShowAccountMenu(!showAccountMenu)} style={{ padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, background: "rgba(204,255,0,0.1)", color: "#CCFF00", border: "1px solid rgba(204,255,0,0.2)", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 20, height: 20, borderRadius: 10, background: "#CCFF00", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>
-                  {(auth.email || '?')[0].toUpperCase()}
-                </span>
-                Акаунт
-              </button>
-            ) : (
-              <button onClick={() => setShowAccountModal(true)} style={{ padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 500, background: "transparent", color: "#71717A", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
-                🔐 Влез
-              </button>
-            )
+            <button onClick={() => setShowAccountMenu(!showAccountMenu)} className={`${css.navAuthBtn} ${auth.isAuthenticated ? css.navAuthBtnActive : ''}`}>
+              <span className={css.navAvatar}>{auth.isAuthenticated ? (auth.email || '?')[0].toUpperCase() : '👤'}</span>
+              {auth.isAuthenticated ? 'Акаунт' : 'Профил'}
+            </button>
           )}
         </div>
-        <JourneyBar onNavigate={nv} />
+        {user.journeyProgress < 100 && <JourneyBar onNavigate={nv} />}
       </div>
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 clamp(12px, 3vw, 20px)", paddingBottom: 80 }}>
+      {/* MOBILE BOTTOM NAV */}
+      <nav className={css.mobileNav}>
+        <div className={css.mobileNavInner}>
+          {[['home', '🏠', 'Начало'], ['browse', '🎓', 'Универ. '], ['test', '🧠', 'Тест'], ['tracker', '📝', 'Tracker'], ['dash', '📋', 'Табло']].map(([k, icon, label]) => (
+            <button key={k} onClick={() => nv(k)} className={css.mobileNavBtn}>
+              <span className={css.mobileNavIcon}>{icon}</span>
+              <span className={`${css.mobileNavLabel} ${pg === k ? css.mobileNavLabelActive : ''}`}>{label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <div className={css.mainContent}>
 
         {/* HOME */}
         {pg === "home" && <div className="page-enter">
-          <div style={{ textAlign: "center", padding: "72px 0 48px" }}>
-            <div style={{ display: "inline-flex", padding: "5px 16px", background: "rgba(204,255,0,0.1)", color: "#CCFF00", borderRadius: 100, fontSize: 12, fontWeight: 600, marginBottom: 20, border: "1px solid rgba(204,255,0,0.2)" }}>✨ Новият начин да избереш бъдещето си</div>
-            <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: "clamp(32px,6vw,56px)", fontWeight: 700, lineHeight: 1.1, marginBottom: 16, letterSpacing: "-0.02em" }}>
+          <div className={css.hero}>
+            <div className={css.heroBadge}>✨ Новият начин да избереш бъдещето си</div>
+            <h1 className={css.heroTitle}>
               Find your future,<br/><span className="grad-text">not just a degree</span>
             </h1>
-            <p style={{ fontSize: 16, color: "#A1A1AA", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.6 }}>
+            <p className={css.heroSubtitle}>
               {profile.onboarded && profile.riasecDone
                 ? `${profile.archetype ? `🏆 ${profile.archetype}` : ''} · ${profile.fields.slice(0,2).join(', ') || 'Всички области'} · €${profile.budget}/мес`
-                : '70 университета · 20+ държави · AI matching · Всичко на български'}
+                : `${universities.length} университета · ${allCountries.length} държави · AI matching · Всичко на български`}
             </p>
-            <div style={{ maxWidth: 560, margin: "0 auto 32px", position: "relative" }}>
-              <input value={sr} onChange={e => { sR(e.target.value); sCp(1); }}
+            <div className={css.heroSearchWrap}>
+              <input
+                value={sr}
+                onChange={e => { sR(e.target.value); sCp(1); }}
                 onKeyDown={e => { if (e.key === 'Enter' && sr.trim()) doHeroSearch(); }}
                 placeholder="Искам да уча Дизайн в Нидерландия..."
-                style={{ width: "100%", padding: "16px 24px", paddingRight: 56, background: "#161618", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, fontSize: 15, fontFamily: "inherit", color: "#fff", outline: "none", transition: "all 0.3s" }}
-                onFocus={e => { e.currentTarget.style.borderColor = 'rgba(204,255,0,0.4)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(204,255,0,0.08)'; }}
-                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = ''; }} />
-              <span onClick={() => { if (sr.trim()) doHeroSearch(); }} style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", fontSize: 18, cursor: "pointer" }}>🔍</span>
+                className={css.heroSearchInput}
+              />
+              <span onClick={() => { if (sr.trim()) doHeroSearch(); }} className={css.heroSearchIcon}>🔍</span>
             </div>
             {/* Next-best-action CTAs */}
             {(() => { const actions = getNextActions(profile); return (
-              <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+              <div className={css.heroCtas}>
                 {actions.slice(0, 1).map((a, i) => <Btn key={i} primary onClick={() => nv(a.route)}>{a.icon} {a.text}</Btn>)}
-                <Btn ghost onClick={() => nv("browse")}>🎓 Университети</Btn>
+                <Btn ghost onClick={() => nv('browse')}>🎓 Университети</Btn>
                 <Btn accent onClick={() => setChat(true)}>🤖 AI Съветник</Btn>
               </div>
             ); })()}
-            <div style={{ display: "flex", justifyContent: "center", gap: 40, marginTop: 48, flexWrap: "wrap" }}>
-              {[[String(universities.length), "Университета"], [String(allCountries.length), "Държави"], [String(scholarships.length), "Стипендии"], ["AI", "Matching"]].map(([n, l]) =>
-                <div key={l} style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 32, fontWeight: 700, color: "#CCFF00" }}>{n}</div>
-                  <div style={{ fontSize: 12, color: "#71717A", marginTop: 2 }}>{l}</div>
+            <div className={css.heroStats}>
+              {[[String(universities.length), 'Университета'], [String(allCountries.length), 'Държави'], [String(scholarships.length), 'Стипендии'], ['AI', 'Matching']].map(([n, l]) =>
+                <div key={l} className={css.heroStatItem}>
+                  <div className={css.heroStatNum}>{n}</div>
+                  <div className={css.heroStatLabel}>{l}</div>
                 </div>)}
             </div>
           </div>
@@ -540,7 +611,7 @@ export default function App() {
             <p style={{ color: "#71717A", fontSize: 14, marginBottom: 16 }}>{ls.length} резултата</p>
 
             {/* Recommended for you — shows when no filters/search active */}
-            {profile.onboarded && !sr && !ft.c && !ft.f && !mapMode && (() => {
+            {profile.onboarded && !sr && !ft.cs.length && !ft.fs.length && !mapMode && (() => {
               const recs = getRecommendedUnis(profile, 5);
               return recs.length > 0 && (
                 <div style={{ marginBottom: 20 }}>
@@ -579,7 +650,7 @@ export default function App() {
               );
             })()}
 
-            {mapMode && <div style={{ marginBottom: 18 }}><EuropeMap onSelectUni={u => { sL(u); sTab("info"); setMap(false); }} filters={{ c: ft.c, field: ft.f }} /></div>}
+            {mapMode && <div style={{ marginBottom: 18 }}><EuropeMap onSelectUni={u => { sL(u); sTab("info"); setMap(false); }} filters={{ cs: ft.cs, fs: ft.fs }} /></div>}
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
                 <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15 }}>🔍</span>
@@ -588,16 +659,89 @@ export default function App() {
               </div>
               <Btn ghost sm onClick={() => sSf(!sf)} style={{ color: sf ? "#CCFF00" : undefined }}>⚙️ Филтри</Btn>
             </div>
-            {sf && <Card style={{ marginBottom: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10 }}>
-              {[["Държава", "c", allCountries], ["Област", "f", allFields]].map(([l, k, ops]) => <div key={k}><div style={{ fontSize: 10, fontWeight: 600, color: "#71717A", textTransform: "uppercase", marginBottom: 4, letterSpacing: "0.05em" }}>{l}</div>
-                <select value={ft[k]} onChange={e => { sF({ ...ft, [k]: e.target.value }); sCp(1) }} style={{ width: "100%", padding: "8px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontFamily: "inherit", fontSize: 12, background: "#0A0A0B", color: "#A1A1AA" }}><option value="">Всички</option>{ops.map(o => <option key={o}>{o}</option>)}</select></div>)}
-              <div><div style={{ fontSize: 10, fontWeight: 600, color: "#71717A", textTransform: "uppercase", marginBottom: 4, letterSpacing: "0.05em" }}>Сортиране</div>
-                <select value={ft.s} onChange={e => sF({ ...ft, s: e.target.value })} style={{ width: "100%", padding: "8px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, fontFamily: "inherit", fontSize: 12, background: "#0A0A0B", color: "#A1A1AA" }}>
-                  <option value="ranking">Класиране</option>{profile.onboarded && <option value="match">🎯 Match %</option>}<option value="rating">Рейтинг</option><option value="tuition">Такса ↑</option><option value="emp">Заетост ↓</option><option value="col">Разходи ↑</option></select></div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 16 }}>
-                <input type="checkbox" checked={ft.free} onChange={e => { sF({ ...ft, free: e.target.checked }); sCp(1) }} style={{ accentColor: "#CCFF00" }} />
-                <span style={{ fontSize: 12, color: "#A1A1AA" }}>Безплатно</span></div>
-            </Card>}
+
+            {sf && (() => {
+              const activeCount = [ft.cs.length, ft.fs.length, ft.type, ft.free, ft.minRating > 0, ft.maxTuition < 20000].filter(Boolean).length;
+              const toggleItem = (key, val) => {
+                sF(prev => {
+                  const items = prev[key] || [];
+                  const nextItems = items.includes(val) ? items.filter(i => i !== val) : [...items, val];
+                  return { ...prev, [key]: nextItems };
+                });
+                sCp(1);
+              };
+
+              return (
+              <Card style={{ marginBottom: 14, padding: '16px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: '#71717A', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Κοντροли {activeCount > 0 && <span style={{ marginLeft: 6, padding: '2px 8px', borderRadius: 100, background: 'rgba(204,255,0,0.15)', color: '#CCFF00', fontSize: 10 }}>{activeCount} активни</span>}
+                  </span>
+                  {activeCount > 0 && <button onClick={() => { sF({ cs: [], fs: [], s: 'ranking', type: '', free: false, minRating: 0, maxTuition: 20000 }); sCp(1); }} style={{ fontSize: 11, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>&#10005; Изчисти</button>}
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#71717A', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>Държави</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {allCountries.map(c => (
+                      <button key={c} onClick={() => toggleItem('cs', c)} style={{
+                        padding: '5px 12px', borderRadius: 100, fontSize: 11,
+                        background: ft.cs.includes(c) ? 'rgba(204,255,0,0.15)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${ft.cs.includes(c) ? 'rgba(204,255,0,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                        color: ft.cs.includes(c) ? '#CCFF00' : '#A1A1AA',
+                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s'
+                      }}>{c}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#71717A', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>Области</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {allFields.map(f => (
+                      <button key={f} onClick={() => toggleItem('fs', f)} style={{
+                        padding: '5px 12px', borderRadius: 100, fontSize: 11,
+                        background: ft.fs.includes(f) ? 'rgba(93,95,239,0.15)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${ft.fs.includes(f) ? 'rgba(93,95,239,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                        color: ft.fs.includes(f) ? '#818CF8' : '#A1A1AA',
+                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s'
+                      }}>{fieldEmoji[f] || "📌"} {f}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14 }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: '#71717A', textTransform: 'uppercase', marginBottom: 4, letterSpacing: '0.05em' }}>Сортиране</div>
+                    <select value={ft.s} onChange={e => sF({ ...ft, s: e.target.value })} className={css.filterSelect} style={{ width: '100%' }}>
+                      <option value="ranking">Класиране</option>
+                      {profile.onboarded && <option value="match">🎯 Match %</option>}
+                      <option value="rating">Рейтинг</option>
+                      <option value="tuition">Такса ↑</option>
+                      <option value="emp">Заетост ↓</option>
+                      <option value="col">Разходи ↑</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: '#71717A', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>Мин. рейтинг — <span style={{ color: ft.minRating > 0 ? '#F59E0B' : '#71717A' }}>{ft.minRating > 0 ? '⭐'.repeat(Math.round(ft.minRating)) + ' ' + ft.minRating.toFixed(1) + '+' : 'Всички'}</span></div>
+                    <input type="range" min="0" max="4.5" step="0.5" value={ft.minRating}
+                      onChange={e => { sF({ ...ft, minRating: parseFloat(e.target.value) }); sCp(1); }}
+                      style={{ width: '100%', accentColor: '#F59E0B' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 600, color: '#71717A', textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>Макс. такса — <span style={{ color: ft.maxTuition < 20000 ? '#22C55E' : '#71717A' }}>{ft.maxTuition < 20000 ? '€' + ft.maxTuition.toLocaleString() : 'Без ограничение'}</span></div>
+                    <input type="range" min="0" max="20000" step="500" value={ft.maxTuition}
+                      onChange={e => { sF({ ...ft, maxTuition: parseInt(e.target.value) }); sCp(1); }}
+                      style={{ width: '100%', accentColor: '#22C55E' }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 20 }}>
+                    <input type="checkbox" id="free-filter" checked={ft.free} onChange={e => { sF({ ...ft, free: e.target.checked }); sCp(1); }} style={{ accentColor: '#CCFF00', width: 16, height: 16 }} />
+                    <label htmlFor="free-filter" style={{ fontSize: 12, color: '#A1A1AA', cursor: 'pointer' }}>🎉 Само безплатни</label>
+                  </div>
+                </div>
+              </Card>
+              );
+            })()}
             {/* Sprint 2: Save prompt after adding favorites */}
             {auth.isGuest && auth.authAvailable && fav.length >= 2 && <SaveProgressPrompt variant="favorite" onSignIn={() => setShowAccountModal(true)} />}
             {sh.map(u => <UniRow key={u.id} u={u} />)}
@@ -611,7 +755,7 @@ export default function App() {
         {pg === "guides" && <>
           <CountryGuidesPage
             onBrowseUni={(u) => { sL(u); nv("browse"); sTab("info"); }}
-            onBrowseCountry={(countryName) => { sF({ ...ft, c: countryName }); sSf(true); nv("browse"); }}
+            onBrowseCountry={(countryName) => { sF({ ...ft, cs: [countryName] }); sSf(true); nv("browse"); }}
           />
           {auth.isGuest && auth.authAvailable && profile.quizResults && <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 20px' }}><SaveProgressPrompt variant="quiz" onSignIn={() => setShowAccountModal(true)} /></div>}
         </>}
@@ -892,11 +1036,15 @@ export default function App() {
       </div>
 
       {/* Floating compare */}
-      {cm.length > 0 && pg !== "compare" && <div style={{ position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)", background: "#161618", color: "white", padding: "10px 24px", borderRadius: 100, display: "flex", alignItems: "center", gap: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 99, border: "1px solid rgba(255,255,255,0.1)" }}>
-        <span style={{ background: "#5D5FEF", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700 }}>{cm.length}</span>
-        <span style={{ fontSize: 12, color: "#A1A1AA" }}>за сравнение</span>
-        <Btn primary sm onClick={() => nv("compare")}>Сравни →</Btn>
-      </div>}
+      {cm.length > 0 && ['home', 'browse', 'programs'].includes(pg) && (
+        <div style={{ position: "fixed", bottom: 16, left: "50%", transform: "translateX(-50%)", background: "#161618", color: "white", padding: "10px 16px 10px 24px", borderRadius: 100, display: "flex", alignItems: "center", gap: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", zIndex: 99, border: "1px solid rgba(255,255,255,0.1)", animation: 'fadeInUp 0.3s ease-out' }}>
+          <span style={{ background: "#5D5FEF", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700 }}>{cm.length}</span>
+          <span style={{ fontSize: 12, color: "#A1A1AA" }}>за сравнение</span>
+          <Btn primary sm onClick={() => nv("compare")}>Сравни →</Btn>
+          <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.1)', marginLeft: 4 }} />
+          <button onClick={() => { cm.forEach(id => user.toggleCompare(id)); }} style={{ background: 'none', border: 'none', color: '#71717A', fontSize: 18, cursor: 'pointer', padding: '4px' }} title="Изчисти всичко">✕</button>
+        </div>
+      )}
 
       {!chat && <div onClick={() => setChat(true)} style={{ position: "fixed", bottom: cm.length > 0 ? 70 : 18, right: 18, width: 56, height: 56, borderRadius: 18, background: "linear-gradient(135deg,#5D5FEF,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 20px rgba(93,95,239,0.4)", zIndex: 98, animation: "pulse 2s ease-in-out infinite", fontSize: 24 }}>🤖</div>}
 
@@ -910,7 +1058,9 @@ export default function App() {
         email={auth.email}
         plan={userPlan}
         onSignOut={() => { auth.signOut(); setShowAccountMenu(false); user.setAuthUserId(null); setUserPlan('free'); }}
+        onSignIn={() => { setShowAccountMenu(false); setShowAccountModal(true); }}
         onReminders={() => { setShowAccountMenu(false); setShowReminders(true); }}
+        onReset={() => { if(window.confirm('Сигурни ли сте, че искате да нулирате профила си? Всички данни ще бъдат изтрити.')) { user.resetProfile(); setShowAccountMenu(false); setShowOnboarding(true); nv('home'); } }}
         onClose={() => setShowAccountMenu(false)}
       />}
 

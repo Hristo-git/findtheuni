@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
@@ -31,7 +33,7 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
   background: var(--bg-main);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -56,6 +58,15 @@ h1, h2, h3, .heading-font {
 @keyframes glow {
   0%, 100% { box-shadow: 0 0 20px var(--accent-glow), 0 0 60px rgba(204, 255, 0, 0.1); }
   50% { box-shadow: 0 0 30px var(--accent-glow), 0 0 80px rgba(204, 255, 0, 0.15); }
+}
+
+@keyframes toast-in {
+  from { transform: translateX(100%) scale(0.9); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
+}
+@keyframes toast-out {
+  from { transform: translateX(0) scale(1); opacity: 1; }
+  to { transform: translateX(100%) scale(0.9); opacity: 0; }
 }
 
 button {

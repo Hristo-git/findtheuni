@@ -4,6 +4,7 @@ import { allFields, fieldEmoji } from '../data/universities.js';
 import { Btn, Card } from './UI.jsx';
 
 const steps = [
+  { key: 'identity', title: 'Как да се обръщаме към теб?', emoji: '👋' },
   { key: 'level', title: 'Какво ниво на образование търсиш?', emoji: '🎓',
     opts: [
       { label: '📚 Бакалавър', value: 'bachelor', desc: '3-4 години, след средно' },
@@ -13,7 +14,7 @@ const steps = [
     ]},
   { key: 'langPref', title: 'На какъв език искаш да учиш?', emoji: '🗣️',
     opts: [
-      { label: '🇬🇧 Английски', value: 'en', desc: 'Най-много програми' },
+      { label: '🇬🇧 Английски', value: 'en', desc: 'Нидерландия, Италия, Ирландия (най-много програми)' },
       { label: '🇩🇪 Немски', value: 'de', desc: 'Безплатно в Германия/Австрия' },
       { label: '🇫🇷 Френски', value: 'fr', desc: 'Франция, Швейцария, Белгия' },
       { label: '🌐 На местен език (по-евтино)', value: 'local', desc: 'Често безплатно' },
@@ -52,7 +53,7 @@ const topFields = ["IT", "Медицина", "Инженерство", "Бизн
 export default function OnboardingWizard({ onFinish }) {
   const { update } = useUser();
   const [step, setStep] = useState(0);
-  const [data, setData] = useState({ level: '', langPref: '', budget: 800, fields: [], langCert: '', gpa: '', startDate: '' });
+  const [data, setData] = useState({ name: '', email: '', level: '', langPref: '', budget: 800, fields: [], langCert: '', gpa: '', startDate: '' });
 
   const s = steps[step];
 
@@ -78,6 +79,8 @@ export default function OnboardingWizard({ onFinish }) {
     if (d.langCert && d.langCert !== 'none') langCerts[d.langCert] = true;
     update({
       onboarded: true,
+      name: d.name,
+      email: d.email,
       level: d.level,
       langPref: d.langPref,
       budget: d.budget,
@@ -116,6 +119,27 @@ export default function OnboardingWizard({ onFinish }) {
           <div style={{ fontSize: 40, marginBottom: 6, animation: 'float 3s ease-in-out infinite' }}>{s.emoji}</div>
           <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 20, fontWeight: 600, lineHeight: 1.3, color: '#FFFFFF' }}>{s.title}</h2>
         </div>
+
+        {/* IDENTITY STEP */}
+        {s.key === 'identity' && (
+          <div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13, color: '#A1A1AA', marginBottom: 6 }}>Твоето име</label>
+              <input type="text" value={data.name} onChange={e => setData(d => ({ ...d, name: e.target.value }))}
+                placeholder="Напр. Алекс"
+                style={{ width: '100%', padding: '14px 18px', background: '#161618', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, fontSize: 15, color: '#fff', fontFamily: 'inherit', outline: 'none' }} />
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 13, color: '#A1A1AA', marginBottom: 6 }}>Твоят имейл</label>
+              <input type="email" value={data.email} onChange={e => setData(d => ({ ...d, email: e.target.value }))}
+                placeholder="alex@example.com"
+                style={{ width: '100%', padding: '14px 18px', background: '#161618', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, fontSize: 15, color: '#fff', fontFamily: 'inherit', outline: 'none' }} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <Btn primary onClick={() => setStep(step + 1)} disabled={!data.name || !data.email.includes('@')}>Продължи →</Btn>
+            </div>
+          </div>
+        )}
 
         {/* GPA STEP — input */}
         {s.key === 'gpa' && (

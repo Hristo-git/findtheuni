@@ -1,0 +1,420 @@
+/* ═══ FindTheUni — App.module.css ═══════════════════════════════════
+   Extracted from App.jsx inline styles for better performance,
+   maintainability, and responsive design support.
+   ================================================================= */
+
+/* ── Root shell ─────────────────────────────── */
+.shell {
+  min-height: 100vh;
+  background: #0A0A0B;
+}
+
+/* ── Glassmorphism Nav ──────────────────────── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10, 10, 11, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0 20px;
+}
+.navInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+}
+.navLogo {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.navLogoIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #CCFF00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.navTabs {
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  padding: 4px 0 4px 8px;
+  flex: 1;
+  scrollbar-width: none;
+}
+.navTabs::-webkit-scrollbar { display: none; }
+.navTab {
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-size: 12px;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  font-weight: 500;
+  color: #71717A;
+  background: transparent;
+}
+.navTab:hover { color: #A1A1AA; background: rgba(255,255,255,0.04); transform: none; }
+.navTabActive {
+  font-weight: 600;
+  color: #CCFF00;
+  background: rgba(204, 255, 0, 0.1);
+}
+.navAuthBtn {
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  color: #71717A;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.navAuthBtn:hover { color: #fff; border-color: rgba(255,255,255,0.2); transform: none; }
+.navAuthBtnActive {
+  background: rgba(204, 255, 0, 0.1);
+  color: #CCFF00;
+  border: 1px solid rgba(204, 255, 0, 0.2);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.navAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: #CCFF00;
+  color: #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── Main content wrapper ───────────────────── */
+.mainContent {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(12px, 3vw, 20px);
+  padding-bottom: 80px;
+}
+
+/* ── Hero section ───────────────────────────── */
+.hero {
+  text-align: center;
+  padding: 72px 0 48px;
+}
+.heroBadge {
+  display: inline-flex;
+  padding: 5px 16px;
+  background: rgba(204, 255, 0, 0.1);
+  color: #CCFF00;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  border: 1px solid rgba(204, 255, 0, 0.2);
+}
+.heroTitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(32px, 6vw, 56px);
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+.heroSubtitle {
+  font-size: 16px;
+  color: #A1A1AA;
+  max-width: 520px;
+  margin: 0 auto 28px;
+  line-height: 1.6;
+}
+.heroSearchWrap {
+  max-width: 560px;
+  margin: 0 auto 32px;
+  position: relative;
+}
+.heroSearchInput {
+  width: 100%;
+  padding: 16px 24px;
+  padding-right: 56px;
+  background: #161618;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 100px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.heroSearchInput:focus {
+  border-color: rgba(204, 255, 0, 0.4);
+  box-shadow: 0 0 30px rgba(204, 255, 0, 0.08);
+}
+.heroSearchIcon {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  cursor: pointer;
+}
+.heroCtas {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.heroStats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 48px;
+  flex-wrap: wrap;
+}
+.heroStatItem {
+  text-align: center;
+}
+.heroStatNum {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #CCFF00;
+}
+.heroStatLabel {
+  font-size: 12px;
+  color: #71717A;
+  margin-top: 2px;
+}
+
+/* ── Bento grid ─────────────────────────────── */
+.bentoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+/* ── Uni card row ───────────────────────────── */
+.uniRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+.uniRowLogoWrap {
+  position: relative;
+}
+.uniRowLogo {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+}
+.uniRowBadge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #0A0A0B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  border: 2px solid #0A0A0B;
+}
+.uniRowName { font-size: 14px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uniRowMeta { display: flex; gap: 10px; font-size: 12px; color: #71717A; flex-wrap: wrap; margin-top: 2px; }
+.uniRowActions { display: flex; gap: 8px; align-items: center; }
+
+/* ── Browse filter bar ──────────────────────── */
+.filterPill {
+  padding: 6px 14px;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #161618;
+  color: #A1A1AA;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.filterPill:hover { border-color: rgba(204,255,0,0.3); color: #CCFF00; transform: none; }
+.filterPillActive {
+  background: rgba(204, 255, 0, 0.1);
+  border-color: rgba(204, 255, 0, 0.3);
+  color: #CCFF00;
+  font-weight: 600;
+}
+.filterSelect {
+  padding: 8px 12px;
+  background: #161618;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #A1A1AA;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.filterSelect:focus {
+  border-color: rgba(204, 255, 0, 0.4);
+  outline: none;
+}
+
+/* ── Skeleton Loader ────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #161618 25%, #1E1E21 50%, #161618 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 12px;
+}
+.skeletonText { height: 14px; border-radius: 4px; }
+.skeletonUniRow {
+  display: grid;
+  grid-template-columns: 48px 1fr 80px;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  background: #161618;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.skeletonCircle {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+.skeletonLine { height: 13px; border-radius: 4px; margin-bottom: 6px; }
+.skeletonLineShort { width: 60%; height: 11px; border-radius: 4px; }
+
+/* ── AI Match Explanation bubble ────────────── */
+.matchExplain {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(93, 95, 239, 0.08);
+  border: 1px solid rgba(93, 95, 239, 0.15);
+  border-radius: 10px;
+  font-size: 11px;
+  color: #818CF8;
+  line-height: 1.5;
+  margin-top: 8px;
+  animation: fadeIn 0.3s ease-out;
+}
+.matchExplainIcon { font-size: 14px; flex-shrink: 0; }
+
+/* ── Mobile Bottom Nav ──────────────────────── */
+.mobileNav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  background: rgba(10, 10, 11, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 0 env(safe-area-inset-bottom);
+}
+.mobileNavInner {
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+}
+.mobileNavBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease;
+}
+.mobileNavBtn:active { transform: scale(0.9); }
+.mobileNavIcon { font-size: 22px; line-height: 1; }
+.mobileNavLabel {
+  font-size: 9px;
+  color: #71717A;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.mobileNavLabelActive { color: #CCFF00; font-weight: 700; }
+
+/* ── Next Steps card ────────────────────────── */
+.nextStepsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+.nextStepsBtn {
+  padding: 14px 16px;
+  border-radius: 14px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: #161618;
+}
+.nextStepsBtnPrimary {
+  background: rgba(204, 255, 0, 0.08);
+  border-color: rgba(204, 255, 0, 0.25);
+}
+.nextStepsBtn:hover { transform: translateY(-2px); border-color: rgba(204,255,0,0.5); }
+
+/* ── Responsive ─────────────────────────────── */
+@media (max-width: 768px) {
+  .nav { padding: 0 12px; }
+  .navTabs { display: none; }
+  .mobileNav { display: block; }
+  .mainContent { padding-bottom: 90px; }
+  .hero { padding: 48px 0 32px; }
+  .heroStats { gap: 24px; }
+}
+
+@media (max-width: 480px) {
+  .heroTitle { font-size: 28px !important; }
+  .bentoGrid { grid-template-columns: 1fr 1fr; }
+  .uniRow { grid-template-columns: auto 1fr auto; gap: 10px; padding: 12px 14px; }
+}

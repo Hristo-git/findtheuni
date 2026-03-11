@@ -41,15 +41,17 @@ export default function JourneyBar({ onNavigate }) {
                 }} />
               )}
               <button
-                onClick={() => !isLocked && onNavigate(stage.route)}
-                title={stage.label}
+                onClick={() => onNavigate(stage.route)}
+                title={isLocked ? `${stage.label} — ${stage.emoji} Клиkни за да отидеш` : stage.label}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  background: 'none', border: 'none', cursor: isLocked ? 'default' : 'pointer',
-                  padding: '2px 6px', opacity: isLocked ? 0.35 : 1,
-                  transition: 'opacity 0.2s',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  padding: '2px 6px', opacity: isLocked ? 0.4 : 1,
+                  transition: 'opacity 0.2s, transform 0.1s',
                   flexShrink: 0, minWidth: 48,
                 }}
+                onMouseOver={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseOut={e => { e.currentTarget.style.opacity = isLocked ? '0.4' : '1'; e.currentTarget.style.transform = 'none'; }}
               >
                 <div style={{
                   width: 28, height: 28, borderRadius: 9,

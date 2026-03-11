@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export function Btn({ children, onClick, variant = 'primary', size = 'md', disabled, style, type = 'button',
   primary, accent, sm, lg, ghost }) {
@@ -184,6 +184,24 @@ export function MatchRing({ score, size = 48 }) {
           strokeLinecap="round" style={{ transition: 'stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1)', filter: `drop-shadow(0 0 4px ${color}40)` }} />
       </svg>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.28, fontWeight: 700, color }}>{score}</div>
+    </div>
+  );
+}
+
+// Toast notification component
+export function Toast({ msg, onClose }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div style={{ position: 'fixed', bottom: 30, right: 30, zIndex: 9999, animation: 'toast-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) both' }}>
+      <div style={{ background: '#1C1C1F', color: '#fff', padding: '12px 20px', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(204,255,0,0.1)', color: '#CCFF00', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>✨</div>
+        <div style={{ fontSize: 14, fontWeight: 500 }}>{msg}</div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#71717A', marginLeft: 8, fontSize: 18 }}>✕</button>
+      </div>
     </div>
   );
 }

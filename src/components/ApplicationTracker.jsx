@@ -58,6 +58,24 @@ export default function ApplicationTracker() {
   const [view, setView] = useState('tracker'); // tracker | calendar | checklist | roadmap
   const [expanded, setExpanded] = useState(null);
 
+  // ── Gamification: achievements ─────────────────────────────────
+  const docsReady = Object.values(docs).filter(Boolean).length;
+  const accepted = apps.filter(a => a.status === 'accepted').length;
+  const applied = apps.filter(a => ['applied', 'accepted'].includes(a.status)).length;
+  const achievements = [
+    { id: 'first_app', icon: '📋', label: 'Първа крачка', desc: 'Добави първа кандидатура', done: apps.length >= 1 },
+    { id: 'researcher', icon: '🔍', label: 'Разследовател', desc: '3+ кандидатури добавени', done: apps.length >= 3 },
+    { id: 'doc_starter', icon: '📄', label: 'Документалист', desc: '5 документа готови', done: docsReady >= 5 },
+    { id: 'doc_master', icon: '✅', label: 'Готов за старт!', desc: 'Всички 10 документа готови', done: docsReady >= 10 },
+    { id: 'applicant', icon: '📤', label: 'Кандидат', desc: 'Кандидатства в 1 университет', done: applied >= 1 },
+    { id: 'multi_apply', icon: '🚀', label: 'Многоборец', desc: 'Кандидатства в 3+ университета', done: applied >= 3 },
+    { id: 'accepted', icon: '🎉', label: 'Приет!', desc: 'Получи оферта за прием', done: accepted >= 1 },
+    { id: 'champion', icon: '🏆', label: 'Шампион', desc: 'Приет в 2+ университета', done: accepted >= 2 },
+  ];
+  const earnedCount = achievements.filter(a => a.done).length;
+  const totalAchievements = achievements.length;
+  const overallProgress = Math.round((docsReady / 10) * 0.4 * 100 + Math.min(apps.length / 5, 1) * 0.3 * 100 + Math.min(applied / 3, 1) * 0.3 * 100);
+
   // Add application — now persisted via UserContext
   const addApp = () => {
     if (!selUni) return;
@@ -115,6 +133,37 @@ export default function ApplicationTracker() {
         <div>
           <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 24, fontWeight: 600, color: '#FFFFFF' }}>📝 Application Tracker</h2>
           <p style={{ color: '#71717A', fontSize: 13 }}>Следи кандидатурите, дедлайни и документи</p>
+        </div>
+        {/* Gamification overall score */}
+        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#CCFF00', fontFamily: "'Space Grotesk',sans-serif" }}>{overallProgress}%</div>
+          <div style={{ fontSize: 10, color: '#71717A' }}>Готовност</div>
+        </div>
+      </div>
+
+      {/* Gamification: overall progress bar */}
+      <div style={{ marginBottom: 14, background: 'rgba(204,255,0,0.04)', border: '1px solid rgba(204,255,0,0.12)', borderRadius: 14, padding: '12px 16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#CCFF00' }}>🏅 Постижения: {earnedCount}/{totalAchievements}</span>
+          <div style={{ height: 6, flex: 1, marginLeft: 12, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(earnedCount / totalAchievements) * 100}%`, background: 'linear-gradient(90deg, #CCFF00, #22C55E)', borderRadius: 3, transition: 'width 0.6s ease' }} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {achievements.map(a => (
+            <div key={a.id} title={a.desc} style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px', borderRadius: 100, fontSize: 11,
+              background: a.done ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${a.done ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.08)'}`,
+              color: a.done ? '#22C55E' : '#71717A',
+              transition: 'all 0.3s ease',
+              filter: a.done ? 'none' : 'grayscale(1) opacity(0.5)',
+            }}>
+              <span style={{ fontSize: 14 }}>{a.icon}</span>
+              <span style={{ fontWeight: a.done ? 600 : 400 }}>{a.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 

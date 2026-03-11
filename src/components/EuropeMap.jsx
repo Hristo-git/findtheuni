@@ -11,8 +11,8 @@ export default function EuropeMap({ onSelectUni, filters }) {
 
   const filtered = useMemo(() => {
     let list = [...universities];
-    if (filters?.country) list = list.filter(u => u.country === filters.country);
-    if (filters?.field) list = list.filter(u => u.fields.includes(filters.field));
+    if (filters?.cs?.length) list = list.filter(u => filters.cs.includes(u.country));
+    if (filters?.fs?.length) list = list.filter(u => u.fields.some(f => filters.fs.includes(f)));
     return list;
   }, [filters]);
 
