@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { universities, allFields, allCountries, fieldEmoji } from './data/universities';
 import { questions, RIASEC_MAP, dimEmoji, getArchetype, careerOutcomes, scholarships } from './data/testData';
 import { Btn, Card, RadarChart, AnimBar, MatchRing } from './components/UI';
@@ -15,8 +15,16 @@ import B2BPage from './components/B2BPage';
 import CostCalculator from './components/CostCalculator';
 import DecisionHelper from './components/DecisionHelper';
 import JourneyBar from './components/JourneyBar';
+import AccountModal from './components/AccountModal';
+import AccountMenu from './components/AccountMenu';
+import SaveProgressPrompt from './components/SaveProgressPrompt';
+import ReminderSettings from './components/ReminderSettings';
 import { useUser } from './UserContext';
 import { calcMatch, getRecommendedUnis } from './utils/matching';
+import { useAuthState } from './hooks/useAuthState';
+import { migrateLocalToCloud, loadRemoteProfile, ensureUserProfile, getUserPlan } from './lib/profileSync';
+import { track, Events } from './lib/analytics';
+import { isAtLimit } from './lib/entitlements';
 
 // Parse natural language hero search into structured filters
 const FIELD_ALIASES = {
@@ -118,14 +126,56 @@ export default function App() {
   const [chat, setChat] = useState(false);
   const [mapMode, setMap] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showReminders, setShowReminders] = useState(false);
+  const [migrationMsg, setMigrationMsg] = useState('');
+
+  // Sprint 2: Auth state
+  const auth = useAuthState();
+  const [userPlan, setUserPlan] = useState('free');
 
   const cm = profile.compared;
   const fav = profile.favorites;
   const tc = id => user.toggleCompare(id);
-  const tf = id => user.toggleFav(id);
+  const tf = id => { user.toggleFav(id); track(Events.UNIVERSITY_FAVORITED, { uniId: id }); };
 
   useEffect(() => { if (!profile.onboarded) setShowOnboarding(true); }, []);
   useEffect(() => { if (profile.riasecDone && profile.riasecScores) { sA(profile.riasecScores); sD(true); } }, []);
+
+  // Sprint 2: Handle sign-in — migrate local to cloud, hydrate remote profile
+  useEffect(() => {
+    if (!auth.isAuthenticated || !auth.isNewSignIn) return;
+    auth.clearNewSignIn();
+    (async () => {
+      try {
+        await ensureUserProfile(auth.userId, auth.email);
+        const merged = await migrateLocalToCloud(auth.userId, profile);
+        user.hydrateFromRemote(merged);
+        user.setAuthUserId(auth.userId);
+        const plan = await getUserPlan(auth.userId);
+        setUserPlan(plan);
+        setMigrationMsg('Прогресът ти е запазен! ✅');
+        setTimeout(() => setMigrationMsg(''), 4000);
+      } catch (e) {
+        console.warn('[auth] migration failed:', e);
+      }
+    })();
+  }, [auth.isAuthenticated, auth.isNewSignIn]);
+
+  // Sprint 2: On app load, if already authenticated, hydrate from remote
+  useEffect(() => {
+    if (auth.loading || !auth.isAuthenticated) return;
+    user.setAuthUserId(auth.userId);
+    (async () => {
+      try {
+        const remote = await loadRemoteProfile(auth.userId);
+        if (remote?.profile_json) user.hydrateFromRemote({ ...profile, ...remote.profile_json });
+        const plan = await getUserPlan(auth.userId);
+        setUserPlan(plan);
+      } catch {}
+    })();
+  }, [auth.loading]);
 
   const ls = useMemo(() => {
     let l = [...universities];
@@ -230,11 +280,26 @@ export default function App() {
             <span style={{ width: 32, height: 32, borderRadius: 10, background: "#CCFF00", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🎓</span>
             <span className="grad-text">FindTheUni</span>
           </div>
-          <div style={{ display: "flex", gap: 2, overflowX: "auto", padding: "4px 0" }}>
+          <div style={{ display: "flex", gap: 2, overflowX: "auto", padding: "4px 0", flex: 1 }}>
             {[["home", "🏠"], ["test", "🧠"], ["browse", "🎓"], ["programs", "📚"], ["guides", "🌍"], ["scholarships", "🎯"], ["cost", "💰"], ["tracker", "📝"], ["decision", "🤔"], ["reviews", "🌟"], ["peers", "💬"], ["compare", "📊"], ["dash", "📋"]].map(([k, icon]) =>
               <button key={k} onClick={() => nv(k)} style={{ padding: "6px 12px", borderRadius: 100, fontSize: 12, fontWeight: pg === k ? 600 : 500, color: pg === k ? "#CCFF00" : "#71717A", background: pg === k ? "rgba(204,255,0,0.1)" : "transparent", border: "none", flexShrink: 0 }}>{icon}</button>
             )}
           </div>
+          {/* Account button */}
+          {auth.authAvailable && (
+            auth.isAuthenticated ? (
+              <button onClick={() => setShowAccountMenu(!showAccountMenu)} style={{ padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 600, background: "rgba(204,255,0,0.1)", color: "#CCFF00", border: "1px solid rgba(204,255,0,0.2)", cursor: "pointer", fontFamily: "inherit", flexShrink: 0, display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 20, height: 20, borderRadius: 10, background: "#CCFF00", color: "#000", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>
+                  {(auth.email || '?')[0].toUpperCase()}
+                </span>
+                Акаунт
+              </button>
+            ) : (
+              <button onClick={() => setShowAccountModal(true)} style={{ padding: "6px 14px", borderRadius: 100, fontSize: 12, fontWeight: 500, background: "transparent", color: "#71717A", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+                🔐 Влез
+              </button>
+            )
+          )}
         </div>
         <JourneyBar onNavigate={nv} />
       </div>
@@ -399,6 +464,8 @@ export default function App() {
               <Btn accent onClick={() => nv("dash")} sm>📋 Табло</Btn>
               <Btn primary onClick={() => nv("browse")} sm>Всички →</Btn>
             </div>
+            {/* Sprint 2: Save prompt after RIASEC */}
+            {auth.isGuest && auth.authAvailable && <SaveProgressPrompt variant="riasec" onSignIn={() => setShowAccountModal(true)} />}
           </div>}
         </div>}
 
@@ -531,6 +598,8 @@ export default function App() {
                 <input type="checkbox" checked={ft.free} onChange={e => { sF({ ...ft, free: e.target.checked }); sCp(1) }} style={{ accentColor: "#CCFF00" }} />
                 <span style={{ fontSize: 12, color: "#A1A1AA" }}>Безплатно</span></div>
             </Card>}
+            {/* Sprint 2: Save prompt after adding favorites */}
+            {auth.isGuest && auth.authAvailable && fav.length >= 2 && <SaveProgressPrompt variant="favorite" onSignIn={() => setShowAccountModal(true)} />}
             {sh.map(u => <UniRow key={u.id} u={u} />)}
             {tp > 1 && <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 20 }}>
               {Array.from({ length: tp }, (_, i) => <button key={i} onClick={() => sCp(i + 1)} style={{ width: 32, height: 32, borderRadius: 10, border: cp === i + 1 ? "1px solid #CCFF00" : "1px solid rgba(255,255,255,0.1)", background: cp === i + 1 ? "rgba(204,255,0,0.15)" : "transparent", color: cp === i + 1 ? "#CCFF00" : "#71717A", fontSize: 12, fontFamily: "inherit" }}>{i + 1}</button>)}</div>}
@@ -539,10 +608,13 @@ export default function App() {
 
         {pg === "programs" && <ProgramExplorer onSelectUni={(u) => { sL(u); nv("browse"); sTab("info"); }} onNavigate={nv} />}
         {pg === "scholarships" && <div style={{ padding: "32px 0" }}><ScholarshipFinder /></div>}
-        {pg === "guides" && <CountryGuidesPage
-          onBrowseUni={(u) => { sL(u); nv("browse"); sTab("info"); }}
-          onBrowseCountry={(countryName) => { sF({ ...ft, c: countryName }); sSf(true); nv("browse"); }}
-        />}
+        {pg === "guides" && <>
+          <CountryGuidesPage
+            onBrowseUni={(u) => { sL(u); nv("browse"); sTab("info"); }}
+            onBrowseCountry={(countryName) => { sF({ ...ft, c: countryName }); sSf(true); nv("browse"); }}
+          />
+          {auth.isGuest && auth.authAvailable && profile.quizResults && <div style={{ maxWidth: 600, margin: '0 auto', padding: '0 20px' }}><SaveProgressPrompt variant="quiz" onSignIn={() => setShowAccountModal(true)} /></div>}
+        </>}
         {pg === "cost" && <CostCalculator onNavigate={nv} />}
         {pg === "decision" && <DecisionHelper onNavigate={nv} />}
         {pg === "tracker" && <ApplicationTracker />}
@@ -813,6 +885,8 @@ export default function App() {
               ); })()}
               {fav.length > 0 && <><h3 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, marginBottom: 12, marginTop: 20 }}>❤️ Любими</h3>
                 {universities.filter(u => fav.includes(u.id)).map(u => <UniRow key={u.id} u={u} />)}</>}
+              {/* Sprint 2: Save prompt on dashboard */}
+              {auth.isGuest && auth.authAvailable && profile.applications.length > 0 && <SaveProgressPrompt variant="application" onSignIn={() => setShowAccountModal(true)} />}
             </div>}
         </div>}
       </div>
@@ -827,6 +901,41 @@ export default function App() {
       {!chat && <div onClick={() => setChat(true)} style={{ position: "fixed", bottom: cm.length > 0 ? 70 : 18, right: 18, width: 56, height: 56, borderRadius: 18, background: "linear-gradient(135deg,#5D5FEF,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 20px rgba(93,95,239,0.4)", zIndex: 98, animation: "pulse 2s ease-in-out infinite", fontSize: 24 }}>🤖</div>}
 
       <AIChatbot isOpen={chat} onClose={() => setChat(false)} />
+
+      {/* Sprint 2: Account Modal */}
+      {showAccountModal && <AccountModal onClose={() => setShowAccountModal(false)} />}
+
+      {/* Sprint 2: Account Menu */}
+      {showAccountMenu && <AccountMenu
+        email={auth.email}
+        plan={userPlan}
+        onSignOut={() => { auth.signOut(); setShowAccountMenu(false); user.setAuthUserId(null); setUserPlan('free'); }}
+        onReminders={() => { setShowAccountMenu(false); setShowReminders(true); }}
+        onClose={() => setShowAccountMenu(false)}
+      />}
+
+      {/* Sprint 2: Reminder Settings */}
+      {showReminders && <ReminderSettings
+        email={auth.email || profile.email}
+        plan={userPlan}
+        settings={profile.reminderSettings}
+        onSave={s => user.updateReminderSettings(s)}
+        onClose={() => setShowReminders(false)}
+        onPremiumCTA={() => { track(Events.PREMIUM_CTA_VIEWED, { source: 'reminders' }); }}
+      />}
+
+      {/* Sprint 2: Migration success toast */}
+      {migrationMsg && (
+        <div style={{
+          position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)',
+          background: '#161618', border: '1px solid rgba(34,197,94,0.3)',
+          borderRadius: 14, padding: '12px 24px', zIndex: 9999,
+          color: '#22C55E', fontSize: 14, fontWeight: 600,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s'
+        }}>
+          {migrationMsg}
+        </div>
+      )}
 
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "24px", textAlign: "center", color: "#71717A", fontSize: 11 }}>
         🎓 FindTheUni v7 © 2026 · <span style={{ color: "#CCFF00" }}>Glass & Neon Grid</span> · AI Matching

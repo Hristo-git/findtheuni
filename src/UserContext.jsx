@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { debouncedSave } from './lib/profileSync.js';
+import { track, Events } from './lib/analytics.js';
 
 const KEY = 'ftu_profile';
 
@@ -30,12 +32,21 @@ const defaults = {
   archetype: '',
   favorites: [],
   compared: [],
-  savedPrograms: [],  // first-class saved programs
+  savedPrograms: [],
   applications: [],
   docs: {},
-  quizResults: null,  // destination quiz
-  targetCountries: [], // from destination quiz ranked
+  quizResults: null,
+  targetCountries: [],
   createdAt: null,
+  updatedAt: null,
+  // Sprint 2 additions
+  plan: 'free',
+  reminderSettings: {
+    remindersEnabled: false,
+    reminderEmail: '',
+    reminderOffsetsDays: [30, 14, 7, 1],
+    weeklyDigestEnabled: false
+  }
 };
 
 const UserCtx = createContext();
@@ -52,12 +63,19 @@ export function UserProvider({ children }) {
     return { ...defaults };
   });
 
-  // Persist on every change
+  // Track auth user ID for cloud sync
+  const authUserIdRef = useRef(null);
+
+  // Persist locally on every change
   useEffect(() => {
     try { localStorage.setItem(KEY, JSON.stringify(profile)); } catch {}
+    // Also sync to cloud if authenticated
+    if (authUserIdRef.current) {
+      debouncedSave(authUserIdRef.current, profile);
+    }
   }, [profile]);
 
-  // Auto-compute journey stages (sequential — a stage only shows done if prior stages are also done)
+  // Auto-compute journey stages (sequential)
   const completedStages = useMemo(() => {
     const checks = {
       profile: profile.onboarded,
@@ -71,7 +89,7 @@ export function UserProvider({ children }) {
     const done = [];
     for (const stage of JOURNEY_STAGES) {
       if (checks[stage.id]) done.push(stage.id);
-      else break; // Stop at first incomplete — keeps it sequential
+      else break;
     }
     return done;
   }, [profile]);
@@ -85,55 +103,71 @@ export function UserProvider({ children }) {
 
   const journeyProgress = Math.round((completedStages.length / JOURNEY_STAGES.length) * 100);
 
-  const update = (patch) => setProfile(p => ({ ...p, ...patch }));
+  const update = (patch) => setProfile(p => ({ ...p, ...patch, updatedAt: new Date().toISOString() }));
 
   const toggleFav = (id) => setProfile(p => ({
     ...p,
     favorites: p.favorites.includes(id)
       ? p.favorites.filter(x => x !== id)
-      : [...p.favorites, id]
+      : [...p.favorites, id],
+    updatedAt: new Date().toISOString()
   }));
 
   const toggleCompare = (id) => setProfile(p => ({
     ...p,
     compared: p.compared.includes(id)
       ? p.compared.filter(x => x !== id)
-      : p.compared.length < 4 ? [...p.compared, id] : p.compared
+      : p.compared.length < 4 ? [...p.compared, id] : p.compared,
+    updatedAt: new Date().toISOString()
   }));
 
   // ── Saved programs ──
-  const saveProgram = (prog) => setProfile(p => {
-    const key = `${prog.uniId}-${prog.program}`;
-    if (p.savedPrograms.some(sp => `${sp.uniId}-${sp.program}` === key)) return p;
-    return { ...p, savedPrograms: [...p.savedPrograms, { ...prog, savedAt: new Date().toISOString().split('T')[0] }] };
-  });
+  const saveProgram = (prog) => {
+    track(Events.PROGRAM_SAVED, { uniId: prog.uniId, program: prog.program });
+    setProfile(p => {
+      const key = `${prog.uniId}-${prog.program}`;
+      if (p.savedPrograms.some(sp => `${sp.uniId}-${sp.program}` === key)) return p;
+      return { ...p, savedPrograms: [...p.savedPrograms, { ...prog, savedAt: new Date().toISOString().split('T')[0] }], updatedAt: new Date().toISOString() };
+    });
+  };
 
   const removeSavedProgram = (uniId, program) => setProfile(p => ({
     ...p,
-    savedPrograms: p.savedPrograms.filter(sp => !(sp.uniId === uniId && sp.program === program))
+    savedPrograms: p.savedPrograms.filter(sp => !(sp.uniId === uniId && sp.program === program)),
+    updatedAt: new Date().toISOString()
   }));
 
   const isProgramSaved = (uniId, program) =>
     profile.savedPrograms?.some(sp => sp.uniId === uniId && sp.program === program) || false;
 
-  const addApplication = (app) => setProfile(p => ({
-    ...p,
-    applications: [...p.applications, { ...app, id: Date.now(), addedAt: new Date().toISOString().split('T')[0], status: app.status || 'idea' }]
-  }));
+  const addApplication = (app) => {
+    track(Events.APPLICATION_STARTED, { uniId: app.uniId, program: app.program });
+    setProfile(p => ({
+      ...p,
+      applications: [...p.applications, { ...app, id: Date.now(), addedAt: new Date().toISOString().split('T')[0], status: app.status || 'idea' }],
+      updatedAt: new Date().toISOString()
+    }));
+  };
 
-  const updateApplication = (id, patch) => setProfile(p => ({
-    ...p,
-    applications: p.applications.map(a => a.id === id ? { ...a, ...patch } : a)
-  }));
+  const updateApplication = (id, patch) => {
+    if (patch.status) track(Events.APPLICATION_STATUS_CHANGED, { applicationId: id, status: patch.status });
+    setProfile(p => ({
+      ...p,
+      applications: p.applications.map(a => a.id === id ? { ...a, ...patch } : a),
+      updatedAt: new Date().toISOString()
+    }));
+  };
 
   const removeApplication = (id) => setProfile(p => ({
     ...p,
-    applications: p.applications.filter(a => a.id !== id)
+    applications: p.applications.filter(a => a.id !== id),
+    updatedAt: new Date().toISOString()
   }));
 
   const toggleDoc = (docId) => setProfile(p => ({
     ...p,
-    docs: { ...p.docs, [docId]: !p.docs[docId] }
+    docs: { ...p.docs, [docId]: !p.docs[docId] },
+    updatedAt: new Date().toISOString()
   }));
 
   const saveRiasec = (scores, code, archetype) => setProfile(p => ({
@@ -142,12 +176,29 @@ export function UserProvider({ children }) {
     riasecScores: scores,
     riasecCode: code,
     archetype,
+    updatedAt: new Date().toISOString()
   }));
 
   const resetProfile = () => {
     localStorage.removeItem(KEY);
+    authUserIdRef.current = null;
     setProfile({ ...defaults });
   };
+
+  // Sprint 2: hydrate from remote profile (after sign-in / migration)
+  const hydrateFromRemote = useCallback((remoteProfile) => {
+    setProfile(p => ({ ...defaults, ...remoteProfile }));
+  }, []);
+
+  // Sprint 2: set auth user ID for cloud sync
+  const setAuthUserId = useCallback((userId) => {
+    authUserIdRef.current = userId;
+  }, []);
+
+  // Sprint 2: update reminder settings
+  const updateReminderSettings = useCallback((settings) => {
+    setProfile(p => ({ ...p, reminderSettings: { ...p.reminderSettings, ...settings }, updatedAt: new Date().toISOString() }));
+  }, []);
 
   return (
     <UserCtx.Provider value={{
@@ -157,6 +208,8 @@ export function UserProvider({ children }) {
       toggleDoc, saveRiasec, resetProfile,
       completedStages, currentStage, journeyProgress,
       JOURNEY_STAGES,
+      // Sprint 2
+      hydrateFromRemote, setAuthUserId, updateReminderSettings,
     }}>
       {children}
     </UserCtx.Provider>
