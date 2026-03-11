@@ -457,7 +457,7 @@ export default function App() {
           </div>}
         </div>}
 
-        {pg === "programs" && <ProgramExplorer onSelectUni={(u) => { sL(u); nv("browse"); sTab("info"); }} />}
+        {pg === "programs" && <ProgramExplorer onSelectUni={(u) => { sL(u); nv("browse"); sTab("info"); }} onNavigate={nv} />}
         {pg === "scholarships" && <div style={{ padding: "32px 0" }}><ScholarshipFinder /></div>}
         {pg === "guides" && <CountryGuidesPage
           onBrowseUni={(u) => { sL(u); nv("browse"); sTab("info"); }}

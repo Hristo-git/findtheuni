@@ -51,8 +51,8 @@ const allFields = [...new Set(universities.flatMap(u => u.fields))].sort();
 const allCountries = [...new Set(universities.map(u => u.country))].sort();
 const allLanguages = [...new Set(universities.flatMap(u => u.languages))].sort();
 
-export default function ProgramExplorer({ onSelectUni }) {
-  const { profile } = useUser();
+export default function ProgramExplorer({ onSelectUni, onNavigate }) {
+  const { profile, saveProgram, removeSavedProgram, isProgramSaved, addApplication } = useUser();
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState({ field: '', country: '', lang: '', free: false });
   const [showFilters, setShowFilters] = useState(false);
@@ -174,41 +174,82 @@ export default function ProgramExplorer({ onSelectUni }) {
       <div style={{ display: 'grid', gap: 8 }}>
         {shown.map((p, i) => {
           const ms = p.matchScore;
+          const saved = isProgramSaved(p.uni.id, p.program);
+          const programPayload = {
+            uniId: p.uni.id, uniName: p.uni.nameEn, country: p.uni.country,
+            city: p.uni.city, program: p.program, field: p.field,
+            emoji: p.uni.emoji, languages: p.uni.languages,
+            tuition: p.uni.tuition,
+          };
           return (
             <Card key={`${p.uni.id}-${p.program}-${i}`}
-              onClick={() => onSelectUni(p.uni)}
               style={{
-                cursor: 'pointer', padding: '14px 18px',
-                display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 14, alignItems: 'center',
+                padding: '14px 18px',
                 animation: `slideIn .3s ease-out ${i * 0.03}s both`,
               }}>
-              <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(93,95,239,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
-                {fieldEmoji[p.field] || p.uni.emoji}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF', marginBottom: 2 }}>{p.program}</div>
-                <div style={{ fontSize: 11, color: '#71717A' }}>
-                  {p.uni.emoji} {p.uni.nameEn} · 📍{p.uni.city}, {p.uni.country}
+              <div onClick={() => onSelectUni(p.uni)} style={{
+                cursor: 'pointer',
+                display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: 14, alignItems: 'center',
+              }}>
+                <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(93,95,239,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
+                  {fieldEmoji[p.field] || p.uni.emoji}
                 </div>
-                <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 10, color: '#A1A1AA' }}>🏆 #{p.uni.rank}</span>
-                  <span style={{ fontSize: 10, color: '#A1A1AA' }}>💰 {p.uni.tuition[0] === 0 ? 'Безпл.' : `€${p.uni.tuition[0]}`}</span>
-                  <span style={{ fontSize: 10, color: '#A1A1AA' }}>🌐 {p.uni.languages[0]}</span>
-                  <span style={{ fontSize: 10, color: '#A1A1AA' }}>👔 {p.uni.employability}%</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF', marginBottom: 2 }}>{p.program}</div>
+                  <div style={{ fontSize: 11, color: '#71717A' }}>
+                    {p.uni.emoji} {p.uni.nameEn} · 📍{p.uni.city}, {p.uni.country}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 10, color: '#A1A1AA' }}>🏆 #{p.uni.rank}</span>
+                    <span style={{ fontSize: 10, color: '#A1A1AA' }}>💰 {p.uni.tuition[0] === 0 ? 'Безпл.' : `€${p.uni.tuition[0]}`}</span>
+                    <span style={{ fontSize: 10, color: '#A1A1AA' }}>🌐 {p.uni.languages[0]}</span>
+                    <span style={{ fontSize: 10, color: '#A1A1AA' }}>👔 {p.uni.employability}%</span>
+                  </div>
                 </div>
+                {ms != null && ms > 0 && (
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: ms >= 75 ? 'rgba(34,197,94,0.12)' : ms >= 50 ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, fontWeight: 700,
+                    color: ms >= 75 ? '#22C55E' : ms >= 50 ? '#F59E0B' : '#71717A',
+                    flexShrink: 0,
+                  }}>
+                    {ms}%
+                  </div>
+                )}
               </div>
-              {ms != null && ms > 0 && (
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: ms >= 75 ? 'rgba(34,197,94,0.12)' : ms >= 50 ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.06)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 700,
-                  color: ms >= 75 ? '#22C55E' : ms >= 50 ? '#F59E0B' : '#71717A',
-                  flexShrink: 0,
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <button onClick={(e) => {
+                  e.stopPropagation();
+                  if (saved) removeSavedProgram(p.uni.id, p.program);
+                  else saveProgram(programPayload);
+                }} style={{
+                  flex: 1, padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                  background: saved ? 'rgba(204,255,0,0.12)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${saved ? 'rgba(204,255,0,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                  color: saved ? '#CCFF00' : '#A1A1AA', cursor: 'pointer', fontFamily: 'inherit',
                 }}>
-                  {ms}%
-                </div>
-              )}
+                  {saved ? '★ Запазена' : '☆ Запази'}
+                </button>
+                <button onClick={(e) => {
+                  e.stopPropagation();
+                  if (!saved) saveProgram(programPayload);
+                  addApplication({
+                    uniId: p.uni.id, uni: p.uni.nameEn, country: p.uni.country,
+                    program: p.program, emoji: p.uni.emoji,
+                    deadline: '', notes: '',
+                  });
+                  if (onNavigate) onNavigate('tracker');
+                }} style={{
+                  flex: 1, padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                  background: 'rgba(93,95,239,0.12)', border: '1px solid rgba(93,95,239,0.3)',
+                  color: '#818CF8', cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                  📤 Кандидатствай
+                </button>
+              </div>
             </Card>
           );
         })}

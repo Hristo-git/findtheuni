@@ -1,14 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import Anthropic from '@anthropic-ai/sdk';
 import { chatPatterns } from '../data/chatData';
 import { universities, fieldEmoji } from '../data/universities';
 import { useUser } from '../UserContext';
-
-// Browser-direct Claude call (key embedded at build time via VITE_ANTHROPIC_API_KEY)
-const BROWSER_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
-const anthropic = BROWSER_KEY
-  ? new Anthropic({ apiKey: BROWSER_KEY, dangerouslyAllowBrowser: true })
-  : null;
+import { sendChatMessage } from '../services/chatService';
 
 const AI_SYSTEM = `Ти си AI съветник "Find The Uni" — платформа помагаща на български ученици да намерят университет в Европа. Отговаряй САМО НА БЪЛГАРСКИ. Бъди конкретен и сбит (max 160 думи). Използвай emoji умерено.
 
@@ -25,39 +19,10 @@ ${universities.map(u => `${u.emoji} ${u.nameEn} | ${u.country}, ${u.city} | #${u
 • Стипендии: Erasmus+ €800–1200/мес; DAAD €934/мес; Chevening (UK пълна); SI Scholarship (SE); Eiffel €1181/мес (FR)`;
 
 async function getAIReply(userMsg, history, profileContext = '') {
-  const messages = [
-    ...history.slice(-8).map(m => ({ role: m.from === 'user' ? 'user' : 'assistant', content: m.text })),
-    { role: 'user', content: userMsg },
-  ];
-
   const systemPrompt = AI_SYSTEM + profileContext;
-
-  // 1. Browser-direct (no server needed — for Netlify/static hosting)
-  if (anthropic) {
-    const resp = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 450,
-      system: systemPrompt,
-      messages,
-    });
-    return resp.content[0].text;
-  }
-
-  // 2. /api/chat (Vercel serverless deployment)
-  const ctrl = new AbortController();
-  const timeout = setTimeout(() => ctrl.abort(), 9000);
-  try {
-    const r = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userMsg, history }),
-      signal: ctrl.signal,
-    });
-    clearTimeout(timeout);
-    if (r.ok) return (await r.json()).reply;
-  } catch { clearTimeout(timeout); }
-
-  // 3. Local pattern matching fallback
+  const reply = await sendChatMessage({ userMsg, history, systemPrompt });
+  if (reply) return reply;
+  // Fallback to local pattern matching
   return getReply(userMsg, history);
 }
 
@@ -476,7 +441,7 @@ function getJourneyGreeting(profile) {
   let greeting = `Здравей! 👋 Виждам, че търсиш${name ? ` ${name}` : ''}${fields ? ` в ${fields}` : ''}${budget ? ` с бюджет €${budget}/мес` : ''}.`;
 
   // Suggest next step based on journey
-  if (!profile.ripiasec && !profile.hollandCode) greeting += '\n\n💡 Съвет: Направи RIASEC теста, за да разбереш кои области ти подхождат!';
+  if (!profile.riasecDone && !profile.riasecCode) greeting += '\n\n💡 Съвет: Направи RIASEC теста, за да разбереш кои области ти подхождат!';
   else if (!profile.targetCountries?.length && !profile.favorites?.length) greeting += '\n\n💡 Съвет: Разгледай гайдовете по държави, за да избереш дестинация!';
   else if (profile.favorites?.length > 0 && (!profile.applications || profile.applications.length === 0)) greeting += `\n\n💡 Имаш ${profile.favorites.length} любими университета. Готов ли си да започнеш кандидатстване?`;
 
@@ -495,7 +460,7 @@ function buildJourneySystemContext(profile) {
   if (profile.startDate) parts.push(`Начало: ${profile.startDate}`);
   if (profile.favorites?.length) parts.push(`Любими университети: ${profile.favorites.length}`);
   if (profile.applications?.length) parts.push(`Кандидатури: ${profile.applications.length}`);
-  if (profile.hollandCode) parts.push(`Holland код: ${profile.hollandCode}`);
+  if (profile.riasecCode) parts.push(`RIASEC код: ${profile.riasecCode}`);
   return parts.length > 0 ? `\n\nПРОФИЛ НА ПОТРЕБИТЕЛЯ:\n${parts.join(' · ')}` : '';
 }
 
@@ -554,7 +519,7 @@ export default function AIChatbot({ isOpen, onClose, profile: propProfile }) {
           <span style={{ fontSize: 20 }}>🤖</span>
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif", color: '#FFFFFF' }}>AI Съветник</div>
-            <div style={{ fontSize: 10, opacity: 0.8, color: 'rgba(255,255,255,0.7)' }}>Read More Assistant</div>
+            <div style={{ fontSize: 10, opacity: 0.8, color: 'rgba(255,255,255,0.7)' }}>Find The Uni</div>
           </div>
         </div>
         <button onClick={onClose} style={{

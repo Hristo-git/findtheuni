@@ -233,10 +233,10 @@ function CountryDetail({ guide, onBack, onBrowse, onBrowseCountry }) {
 
 // ─── MAIN EXPORT ──────────────────────────────
 export default function CountryGuidesPage({ onBrowseUni, onBrowseCountry }) {
-  const { profile } = useUser();
+  const { profile, update } = useUser();
   const [mode, setMode] = useState('list'); // list | quiz | quizResults | detail
   const [selectedGuide, setSelectedGuide] = useState(null);
-  const [quizResults, setQuizResults] = useState(null);
+  const [quizResults, setQuizResults] = useState(() => profile.quizResults || null);
   const [search, setSearch] = useState('');
 
   const rankedCountries = useMemo(() => getRankedCountries(profile), [profile]);
@@ -260,7 +260,16 @@ export default function CountryGuidesPage({ onBrowseUni, onBrowseCountry }) {
         <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 22, fontWeight: 600, color: '#FFFFFF' }}>Къде да учиш?</h2>
         <p style={{ color: '#71717A', fontSize: 12 }}>6 въпроса → твоите топ 5 дестинации</p>
       </div>
-      <DestQuiz onFinish={(res) => { setQuizResults(res); setMode('quizResults'); }} />
+      <DestQuiz onFinish={(res) => {
+        setQuizResults(res);
+        setMode('quizResults');
+        // Persist into global profile
+        update({
+          quizResults: res,
+          targetCountries: res.map(r => r.id),
+          country: res[0]?.id || profile.country,
+        });
+      }} />
     </div>
   );
 

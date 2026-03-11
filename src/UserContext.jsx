@@ -30,6 +30,7 @@ const defaults = {
   archetype: '',
   favorites: [],
   compared: [],
+  savedPrograms: [],  // first-class saved programs
   applications: [],
   docs: {},
   quizResults: null,  // destination quiz
@@ -61,10 +62,10 @@ export function UserProvider({ children }) {
     const checks = {
       profile: profile.onboarded,
       career: profile.riasecDone,
-      countries: profile.quizResults || profile.targetCountries?.length > 0 || profile.favorites.length > 0,
+      countries: !!profile.quizResults || (profile.targetCountries?.length > 0),
       universities: profile.favorites.length >= 1,
-      programs: profile.favorites.length >= 1 && profile.applications.length > 0,
-      planning: profile.applications.length > 0 && profile.applications.some(a => a.status !== 'idea'),
+      programs: (profile.savedPrograms?.length || 0) > 0,
+      planning: profile.applications.length > 0,
       applying: profile.applications.some(a => a.status === 'applied' || a.status === 'accepted'),
     };
     const done = [];
@@ -100,9 +101,24 @@ export function UserProvider({ children }) {
       : p.compared.length < 4 ? [...p.compared, id] : p.compared
   }));
 
+  // ── Saved programs ──
+  const saveProgram = (prog) => setProfile(p => {
+    const key = `${prog.uniId}-${prog.program}`;
+    if (p.savedPrograms.some(sp => `${sp.uniId}-${sp.program}` === key)) return p;
+    return { ...p, savedPrograms: [...p.savedPrograms, { ...prog, savedAt: new Date().toISOString().split('T')[0] }] };
+  });
+
+  const removeSavedProgram = (uniId, program) => setProfile(p => ({
+    ...p,
+    savedPrograms: p.savedPrograms.filter(sp => !(sp.uniId === uniId && sp.program === program))
+  }));
+
+  const isProgramSaved = (uniId, program) =>
+    profile.savedPrograms?.some(sp => sp.uniId === uniId && sp.program === program) || false;
+
   const addApplication = (app) => setProfile(p => ({
     ...p,
-    applications: [...p.applications, { ...app, id: Date.now(), addedAt: new Date().toISOString().split('T')[0], status: 'idea' }]
+    applications: [...p.applications, { ...app, id: Date.now(), addedAt: new Date().toISOString().split('T')[0], status: app.status || 'idea' }]
   }));
 
   const updateApplication = (id, patch) => setProfile(p => ({
@@ -136,6 +152,7 @@ export function UserProvider({ children }) {
   return (
     <UserCtx.Provider value={{
       profile, update, toggleFav, toggleCompare,
+      saveProgram, removeSavedProgram, isProgramSaved,
       addApplication, updateApplication, removeApplication,
       toggleDoc, saveRiasec, resetProfile,
       completedStages, currentStage, journeyProgress,
