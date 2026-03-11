@@ -175,6 +175,19 @@ export default function App() {
 
   const nv = p => { sP(p); sL(null); sTab("info"); };
 
+  const doHeroSearch = () => {
+    const parsed = parseHeroSearch(sr);
+    if (parsed.country || parsed.field) {
+      // Smart search: set dropdown filters, clear text search
+      sF({ c: parsed.country, f: parsed.field, s: "ranking", type: "", free: false });
+      sR(parsed.remainder);
+      sSf(true);
+    }
+    // If nothing was parsed, keep the raw text as a text search
+    sCp(1);
+    nv("browse");
+  };
+
   const UniRow = ({ u }) => {
     const matchedProgs = sr ? u.programs.filter(p => p.toLowerCase().includes(sr.toLowerCase())) : [];
     const matchScore = calcMatch(u, profile);
@@ -242,12 +255,12 @@ export default function App() {
             </p>
             <div style={{ maxWidth: 560, margin: "0 auto 32px", position: "relative" }}>
               <input value={sr} onChange={e => { sR(e.target.value); sCp(1); }}
-                onKeyDown={e => { if (e.key === 'Enter' && sr.trim()) { const p = parseHeroSearch(sr); sF(f => ({ ...f, c: p.country || f.c, f: p.field || f.f })); sR(p.remainder); sCp(1); if (p.country || p.field) sSf(true); nv("browse"); } }}
+                onKeyDown={e => { if (e.key === 'Enter' && sr.trim()) doHeroSearch(); }}
                 placeholder="Искам да уча Дизайн в Нидерландия..."
                 style={{ width: "100%", padding: "16px 24px", paddingRight: 56, background: "#161618", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, fontSize: 15, fontFamily: "inherit", color: "#fff", outline: "none", transition: "all 0.3s" }}
                 onFocus={e => { e.currentTarget.style.borderColor = 'rgba(204,255,0,0.4)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(204,255,0,0.08)'; }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = ''; }} />
-              <span onClick={() => { if (sr.trim()) { const p = parseHeroSearch(sr); sF(f => ({ ...f, c: p.country || f.c, f: p.field || f.f })); sR(p.remainder); sCp(1); if (p.country || p.field) sSf(true); nv("browse"); } }} style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", fontSize: 18, cursor: "pointer" }}>🔍</span>
+              <span onClick={() => { if (sr.trim()) doHeroSearch(); }} style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", fontSize: 18, cursor: "pointer" }}>🔍</span>
             </div>
             {/* Next-best-action CTAs */}
             {(() => { const actions = getNextActions(profile); return (
