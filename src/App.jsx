@@ -38,30 +38,49 @@ const FIELD_ALIASES = {
 };
 
 function parseHeroSearch(query) {
-  const lower = query.toLowerCase().trim();
+  // Tokenize: split into words for accurate matching
+  const words = query.trim().toLowerCase().split(/\s+/);
   let country = '';
   let field = '';
-  // Match country names (longest first to avoid partial matches)
+
+  // Match country names (multi-word countries checked first, longest first)
   const sortedCountries = [...allCountries].sort((a, b) => b.length - a.length);
+  const joined = words.join(' ');
   for (const c of sortedCountries) {
-    if (lower.includes(c.toLowerCase())) { country = c; break; }
+    if (joined.includes(c.toLowerCase())) { country = c; break; }
   }
-  // Match field names via aliases
-  for (const [alias, mapped] of Object.entries(FIELD_ALIASES)) {
-    if (lower.includes(alias)) { field = mapped; break; }
+
+  // Remove country words from token list so they don't interfere with field matching
+  let remaining = country
+    ? words.filter(w => !country.toLowerCase().split(/\s+/).includes(w))
+    : [...words];
+
+  // Match field via aliases — require the alias to be a standalone word or words
+  const remainingStr = remaining.join(' ');
+  // Sort aliases longest-first to prefer specific matches over short ones like 'ит'
+  const sortedAliases = Object.entries(FIELD_ALIASES).sort((a, b) => b[0].length - a[0].length);
+  let matchedAliasKey = '';
+  for (const [alias, mapped] of sortedAliases) {
+    const re = new RegExp(`(^|\\s)${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|\\s)`);
+    if (re.test(' ' + remainingStr + ' ')) { field = mapped; matchedAliasKey = alias; break; }
   }
   // Also try direct field name match
   if (!field) {
     for (const f of allFields) {
-      if (lower.includes(f.toLowerCase())) { field = f; break; }
+      const re = new RegExp(`(^|\\s)${f.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|\\s)`);
+      if (re.test(' ' + remainingStr + ' ')) { field = f; matchedAliasKey = f.toLowerCase(); break; }
     }
   }
-  // Extract leftover keywords for text search (remove matched country/field and filler words)
-  let remainder = lower;
-  if (country) remainder = remainder.replace(country.toLowerCase(), '');
-  if (field) remainder = remainder.replace(Object.entries(FIELD_ALIASES).find(([, v]) => v === field)?.[0] || field.toLowerCase(), '');
-  // Remove filler words (Bulgarian + English) — repeat to catch adjacent fillers
-  remainder = remainder.replace(/(^|\s)(искам|да|уча|уч[аи]|в|на|за|по|от|и|или|търся|търсене|обучение|програма|университет|i|want|to|study|in|at)(?=\s|$)/gi, '').trim().replace(/\s+/g, ' ');
+
+  // Build remainder: remove the actual matched alias words and filler
+  if (matchedAliasKey) {
+    const aliasWords = new Set(matchedAliasKey.split(/\s+/));
+    remaining = remaining.filter(w => !aliasWords.has(w));
+  }
+  const filler = new Set(['искам', 'да', 'уча', 'учи', 'уча', 'в', 'на', 'за', 'по', 'от', 'и', 'или',
+    'търся', 'търсене', 'обучение', 'програма', 'университет', 'i', 'want', 'to', 'study', 'in', 'at']);
+  const remainder = remaining.filter(w => !filler.has(w)).join(' ');
+
   return { country, field, remainder };
 }
 
