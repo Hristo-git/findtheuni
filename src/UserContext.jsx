@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { debouncedSave } from './lib/profileSync.js';
 import { track, Events } from './lib/analytics.js';
 
-const KEY = 'ftu_profile';
+const KEY = 'ftu_profile_v3';
 
 const JOURNEY_STAGES = [
   { id: 'profile', label: 'Профил', emoji: '👤', route: 'home' },
