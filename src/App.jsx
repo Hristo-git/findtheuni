@@ -18,6 +18,53 @@ import JourneyBar from './components/JourneyBar';
 import { useUser } from './UserContext';
 import { calcMatch, getRecommendedUnis } from './utils/matching';
 
+// Parse natural language hero search into structured filters
+const FIELD_ALIASES = {
+  'дизайн': 'Дизайн', 'design': 'Дизайн',
+  'it': 'IT', 'ит': 'IT', 'информатика': 'IT', 'computer': 'IT', 'софтуер': 'IT', 'програмиране': 'IT',
+  'медицина': 'Медицина', 'medicine': 'Медицина', 'лекар': 'Медицина',
+  'право': 'Право', 'law': 'Право', 'юрист': 'Право',
+  'бизнес': 'Бизнес', 'business': 'Бизнес', 'мениджмънт': 'Бизнес',
+  'инженерство': 'Инженерство', 'инженер': 'Инженерство', 'engineering': 'Инженерство',
+  'архитектура': 'Архитектура', 'architecture': 'Архитектура',
+  'финанси': 'Финанси', 'finance': 'Финанси',
+  'икономика': 'Икономика', 'economics': 'Икономика',
+  'маркетинг': 'Маркетинг', 'marketing': 'Маркетинг',
+  'фармация': 'Фармация', 'pharmacy': 'Фармация',
+  'педагогика': 'Педагогика', 'образование': 'Образование',
+  'изкуства': 'Изкуства', 'art': 'Изкуства',
+  'хуманитарни': 'Хуманитарни', 'humanities': 'Хуманитарни',
+  'математика': 'Математика', 'math': 'Математика',
+};
+
+function parseHeroSearch(query) {
+  const lower = query.toLowerCase().trim();
+  let country = '';
+  let field = '';
+  // Match country names (longest first to avoid partial matches)
+  const sortedCountries = [...allCountries].sort((a, b) => b.length - a.length);
+  for (const c of sortedCountries) {
+    if (lower.includes(c.toLowerCase())) { country = c; break; }
+  }
+  // Match field names via aliases
+  for (const [alias, mapped] of Object.entries(FIELD_ALIASES)) {
+    if (lower.includes(alias)) { field = mapped; break; }
+  }
+  // Also try direct field name match
+  if (!field) {
+    for (const f of allFields) {
+      if (lower.includes(f.toLowerCase())) { field = f; break; }
+    }
+  }
+  // Extract leftover keywords for text search (remove matched country/field and filler words)
+  let remainder = lower;
+  if (country) remainder = remainder.replace(country.toLowerCase(), '');
+  if (field) remainder = remainder.replace(Object.entries(FIELD_ALIASES).find(([, v]) => v === field)?.[0] || field.toLowerCase(), '');
+  // Remove filler words (Bulgarian + English) — repeat to catch adjacent fillers
+  remainder = remainder.replace(/(^|\s)(искам|да|уча|уч[аи]|в|на|за|по|от|и|или|търся|търсене|обучение|програма|университет|i|want|to|study|in|at)(?=\s|$)/gi, '').trim().replace(/\s+/g, ' ');
+  return { country, field, remainder };
+}
+
 const cls = ["#CCFF00", "#5D5FEF", "#22C55E", "#F59E0B", "#EF4444", "#14B8A6"];
 
 function getNextActions(profile) {
@@ -176,12 +223,12 @@ export default function App() {
             </p>
             <div style={{ maxWidth: 560, margin: "0 auto 32px", position: "relative" }}>
               <input value={sr} onChange={e => { sR(e.target.value); sCp(1); }}
-                onKeyDown={e => { if (e.key === 'Enter' && sr.trim()) nv("browse"); }}
+                onKeyDown={e => { if (e.key === 'Enter' && sr.trim()) { const p = parseHeroSearch(sr); sF(f => ({ ...f, c: p.country || f.c, f: p.field || f.f })); sR(p.remainder); sCp(1); if (p.country || p.field) sSf(true); nv("browse"); } }}
                 placeholder="Искам да уча Дизайн в Нидерландия..."
                 style={{ width: "100%", padding: "16px 24px", paddingRight: 56, background: "#161618", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, fontSize: 15, fontFamily: "inherit", color: "#fff", outline: "none", transition: "all 0.3s" }}
                 onFocus={e => { e.currentTarget.style.borderColor = 'rgba(204,255,0,0.4)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(204,255,0,0.08)'; }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = ''; }} />
-              <span onClick={() => { if (sr.trim()) nv("browse"); }} style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", fontSize: 18, cursor: "pointer" }}>🔍</span>
+              <span onClick={() => { if (sr.trim()) { const p = parseHeroSearch(sr); sF(f => ({ ...f, c: p.country || f.c, f: p.field || f.f })); sR(p.remainder); sCp(1); if (p.country || p.field) sSf(true); nv("browse"); } }} style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", fontSize: 18, cursor: "pointer" }}>🔍</span>
             </div>
             {/* Next-best-action CTAs */}
             {(() => { const actions = getNextActions(profile); return (
