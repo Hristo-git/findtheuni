@@ -175,12 +175,13 @@ export default function App() {
                 : '70 университета · 20+ държави · AI matching · Всичко на български'}
             </p>
             <div style={{ maxWidth: 560, margin: "0 auto 32px", position: "relative" }}>
-              <input value={sr} onChange={e => { sR(e.target.value); sCp(1); if (e.target.value) nv("browse"); }}
+              <input value={sr} onChange={e => { sR(e.target.value); sCp(1); }}
+                onKeyDown={e => { if (e.key === 'Enter' && sr.trim()) nv("browse"); }}
                 placeholder="Искам да уча Дизайн в Нидерландия..."
                 style={{ width: "100%", padding: "16px 24px", paddingRight: 56, background: "#161618", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, fontSize: 15, fontFamily: "inherit", color: "#fff", outline: "none", transition: "all 0.3s" }}
                 onFocus={e => { e.currentTarget.style.borderColor = 'rgba(204,255,0,0.4)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(204,255,0,0.08)'; }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = ''; }} />
-              <span style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", fontSize: 18 }}>🔍</span>
+              <span onClick={() => { if (sr.trim()) nv("browse"); }} style={{ position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", fontSize: 18, cursor: "pointer" }}>🔍</span>
             </div>
             {/* Next-best-action CTAs */}
             {(() => { const actions = getNextActions(profile); return (
