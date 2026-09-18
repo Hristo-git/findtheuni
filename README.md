@@ -8,7 +8,7 @@ AI-powered platform helping Bulgarian students find the right European universit
 - 🤖 **AI Chatbot** — Ask questions about universities, scholarships, programs in Bulgarian
 - 🗺️ **Interactive Europe Map** — Visual university browser by location
 - 🎯 **Scholarship Finder** — 15 scholarships with filters (Erasmus+, DAAD, Chevening...)
-- 🎓 **94 Universities** from 24 European countries with detailed info (QS 2026 ranks, per-region tuition, teaching languages)
+- 🎓 **97 Universities** from 25 European countries with detailed info (QS 2026 ranks, per-region tuition, teaching languages)
 - 📊 **Side-by-side Comparison** — Compare up to 4 universities on 13 criteria
 - ❤️ **Wishlist** — Save favorites and track your choices
 - 💰 **Cost of Living** — Monthly expenses breakdown per city
@@ -47,7 +47,7 @@ src/
 │   ├── EuropeMap.jsx    # Interactive SVG map
 │   └── ScholarshipFinder.jsx  # Scholarship browser
 ├── data/
-│   ├── universities.js  # 94 universities with coords, programs, CoL
+│   ├── universities.js  # 97 universities with coords, programs, CoL
 │   ├── testData.js      # RIASEC questions + scholarships
 │   └── chatData.js      # AI chatbot patterns
 └── styles/
