@@ -179,7 +179,7 @@ export default function App() {
             <p style={{ fontSize: 16, color: "#A1A1AA", maxWidth: 520, margin: "0 auto 28px", lineHeight: 1.6 }}>
               {profile.onboarded && profile.riasecDone
                 ? `${profile.archetype ? `🏆 ${profile.archetype}` : ''} · ${profile.fields.slice(0,2).join(', ') || 'Всички области'} · €${profile.budget}/мес`
-                : '70 университета · 20+ държави · AI matching · Всичко на български'}
+                : `${universities.length} университета · ${allCountries.length} държави · AI matching · Всичко на български`}
             </p>
             <div style={{ maxWidth: 560, margin: "0 auto 32px", position: "relative" }}>
               <input value={sr} onChange={e => { sR(e.target.value); sCp(1); if (e.target.value) nv("browse"); }}
@@ -197,7 +197,7 @@ export default function App() {
               <Btn accent onClick={() => setChat(true)}>🤖 AI Съветник</Btn>
             </div>
             <div style={{ display: "flex", justifyContent: "center", gap: 40, marginTop: 48, flexWrap: "wrap" }}>
-              {[["70", "Университета"], ["20+", "Държави"], ["15", "Стипендии"], ["AI", "Matching"]].map(([n, l]) =>
+              {[[`${universities.length}`, "Университета"], [`${allCountries.length}`, "Държави"], ["15", "Стипендии"], ["AI", "Matching"]].map(([n, l]) =>
                 <div key={l} style={{ textAlign: "center" }}>
                   <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 32, fontWeight: 700, color: "#CCFF00" }}>{n}</div>
                   <div style={{ fontSize: 12, color: "#71717A", marginTop: 2 }}>{l}</div>
