@@ -4,6 +4,7 @@ import { questions, RIASEC_MAP, dimEmoji, getArchetype, careerOutcomes } from '.
 import { Btn, Card, RadarChart, AnimBar, MatchRing } from './components/UI';
 import { tuitionFor, tuitionEstimate, feeModel } from './lib/fees';
 import ItalyAid from './components/ItalyAid';
+import { matchesQuery, relevanceScore, searchHighlights, explainQuery } from './lib/search';
 import AIChatbot from './components/AIChatbot';
 import EuropeMap from './components/EuropeMap';
 import ScholarshipFinder from './components/ScholarshipFinder';
@@ -74,13 +75,15 @@ export default function App() {
 
   const ls = useMemo(() => {
     let l = [...universities];
-    if (sr) { const s = sr.toLowerCase(); l = l.filter(u => u.name.toLowerCase().includes(s) || u.nameEn.toLowerCase().includes(s) || u.city.toLowerCase().includes(s) || u.country.toLowerCase().includes(s) || u.programs.some(p => p.toLowerCase().includes(s))); }
+    if (sr) l = l.filter(u => matchesQuery(u, sr));
     if (ft.c) l = l.filter(u => u.country === ft.c);
     if (ft.f) l = l.filter(u => u.fields.includes(ft.f));
     if (ft.type) l = l.filter(u => u.type === ft.type);
     if (ft.free) l = l.filter(u => tuitionFor(u, profile).exact === 0);
     if (ft.s === "match" && profile.onboarded) l.sort((a, b) => (calcMatch(b, profile) || 0) - (calcMatch(a, profile) || 0));
-    else if (ft.s === "ranking") l.sort((a, b) => rankKey(a) - rankKey(b));
+    else if (ft.s === "ranking") l.sort(sr
+      ? (a, b) => relevanceScore(b, sr) - relevanceScore(a, sr) || rankKey(a) - rankKey(b)
+      : (a, b) => rankKey(a) - rankKey(b));
     else if (ft.s === "rating") l.sort((a, b) => b.rating - a.rating);
     else if (ft.s === "tuition") l.sort((a, b) => tuitionEstimate(a, profile) - tuitionEstimate(b, profile));
     else if (ft.s === "emp") l.sort((a, b) => b.employability - a.employability);
@@ -121,7 +124,8 @@ export default function App() {
   const nv = p => { sP(p); sL(null); sTab("info"); };
 
   const UniRow = ({ u }) => {
-    const matchedProgs = sr ? u.programs.filter(p => p.toLowerCase().includes(sr.toLowerCase())) : [];
+    const hl = sr ? searchHighlights(u, sr) : { fields: [], programs: [] };
+    const matchedProgs = hl.programs;
     const matchScore = calcMatch(u, profile);
     return (
     <Card style={{ padding: "16px 18px", marginBottom: 10, cursor: "pointer", display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 14, alignItems: "center" }}
@@ -134,9 +138,10 @@ export default function App() {
         <div style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff" }}>{u.name}</div>
         <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#71717A", flexWrap: "wrap", marginTop: 2 }}>
           <span>📍{u.city}, {u.country}</span><span title={u.rankNote || "QS 2027"}>🏆{u.rank ? `#${u.rank}` : u.rankNote || "—"}</span>
-          {(() => { const t = tuitionFor(u, profile); return <span title={t.why} style={{ color: t.exact === 0 ? "#22C55E" : "#A1A1AA" }}>{t.exact === 0 ? "🎉 Безплатно" : `💶 ${t.label}`}{t.exact === null && " ?"}</span>; })()}
+          {(() => { const t = tuitionFor(u, profile); return <span title={t.why} style={{ color: t.exact === 0 ? "#22C55E" : "#A1A1AA" }}>{t.exact === 0 ? "🎉 Безплатно" : `💶 ${t.label}`}</span>; })()}
         </div>
-        {matchedProgs.length > 0 && <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
+        {(matchedProgs.length > 0 || hl.fields.length > 0) && <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
+          {hl.fields.map((f, i) => <span key={"f" + i} style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, background: "rgba(93,95,239,0.14)", color: "#818CF8" }}>{fieldEmoji[f] || "📌"} {f}</span>)}
           {matchedProgs.slice(0, 3).map((p, i) => <span key={i} style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, background: "rgba(34,197,94,0.12)", color: "#22C55E" }}>🎓 {p}</span>)}
           {matchedProgs.length > 3 && <span style={{ fontSize: 10, color: "#71717A" }}>+{matchedProgs.length - 3}</span>}
         </div>}
@@ -189,7 +194,7 @@ export default function App() {
             </p>
             <div style={{ maxWidth: 560, margin: "0 auto 32px", position: "relative" }}>
               <input value={sr} onChange={e => { sR(e.target.value); sCp(1); if (e.target.value) nv("browse"); }}
-                placeholder="Искам да уча Дизайн в Нидерландия..."
+                placeholder="Италия бизнес · архитектура · Испания медицина..."
                 style={{ width: "100%", padding: "16px 24px", paddingRight: 56, background: "#161618", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, fontSize: 15, fontFamily: "inherit", color: "#fff", outline: "none", transition: "all 0.3s" }}
                 onFocus={e => { e.currentTarget.style.borderColor = 'rgba(204,255,0,0.4)'; e.currentTarget.style.boxShadow = '0 0 30px rgba(204,255,0,0.08)'; }}
                 onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.boxShadow = ''; }} />
@@ -382,12 +387,28 @@ export default function App() {
                 {fav.length > 0 && <Btn ghost sm>❤️ {fav.length}</Btn>}
               </div>
             </div>
-            <p style={{ color: "#71717A", fontSize: 14, marginBottom: 16 }}>{ls.length} резултата</p>
+            {(() => {
+              const ex = sr ? explainQuery(sr, universities) : null;
+              const chips = ex ? [
+                ...ex.countries.map(c => ["📍", c]),
+                ...ex.fields.map(f => [fieldEmoji[f] || "📌", f]),
+                ...ex.other.map(o => ["🔤", o]),
+              ] : [];
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ color: "#71717A", fontSize: 14, margin: 0 }}>{ls.length} резултата</p>
+                  {chips.length > 0 && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: "#52525B" }}>Търся:</span>
+                    {chips.map(([ic, txt], i) => <span key={i} style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, background: "rgba(255,255,255,0.06)", color: "#A1A1AA" }}>{ic} {txt}</span>)}
+                  </div>}
+                </div>
+              );
+            })()}
             {mapMode && <div style={{ marginBottom: 18 }}><EuropeMap onSelectUni={u => { sL(u); sTab("info"); setMap(false); }} filters={{ c: ft.c, field: ft.f }} /></div>}
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
                 <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15 }}>🔍</span>
-                <input value={sr} onChange={e => { sR(e.target.value); sCp(1) }} placeholder="Търси университет, програма, град..."
+                <input value={sr} onChange={e => { sR(e.target.value); sCp(1) }} placeholder="Държава + област, напр. Италия бизнес"
                   style={{ width: "100%", padding: "11px 14px 11px 38px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100, fontSize: 14, fontFamily: "inherit", background: "#161618", color: "#fff", outline: "none" }} />
               </div>
               <Btn ghost sm onClick={() => sSf(!sf)} style={{ color: sf ? "#CCFF00" : undefined }}>⚙️ Филтри</Btn>
@@ -401,6 +422,17 @@ export default function App() {
               <div style={{ display: "flex", alignItems: "center", gap: 8, paddingTop: 16 }}>
                 <input type="checkbox" checked={ft.free} onChange={e => { sF({ ...ft, free: e.target.checked }); sCp(1) }} style={{ accentColor: "#CCFF00" }} />
                 <span style={{ fontSize: 12, color: "#A1A1AA" }}>Безплатно</span></div>
+            </Card>}
+            {ls.length === 0 && <Card style={{ textAlign: "center", padding: "36px 24px" }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>🔍</div>
+              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>Нищо не съвпада с всички условия</div>
+              <p style={{ fontSize: 13, color: "#71717A", maxWidth: 420, margin: "0 auto 16px", lineHeight: 1.6 }}>
+                Всяка дума в търсенето трябва да съвпадне. Пробвай с по-малко думи — например само областта или само държавата.
+              </p>
+              <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
+                {["Италия бизнес", "архитектура", "Испания медицина", "Германия IT"].map(q =>
+                  <button key={q} onClick={() => { sR(q); sCp(1); }} style={{ padding: "6px 14px", borderRadius: 100, fontSize: 12, background: "rgba(204,255,0,0.1)", color: "#CCFF00", border: "1px solid rgba(204,255,0,0.2)", fontFamily: "inherit", cursor: "pointer" }}>{q}</button>)}
+              </div>
             </Card>}
             {sh.map(u => <UniRow key={u.id} u={u} />)}
             {tp > 1 && <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 20 }}>
