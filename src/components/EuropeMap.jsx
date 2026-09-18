@@ -17,6 +17,7 @@ export default function EuropeMap({ onSelectUni, filters }) {
   }, [filters]);
 
   const sizeByRank = (rank) => {
+    if (!rank) return 4;
     if (rank <= 50) return 8;
     if (rank <= 200) return 6;
     if (rank <= 500) return 5;
@@ -24,6 +25,7 @@ export default function EuropeMap({ onSelectUni, filters }) {
   };
 
   const colorByRank = (rank) => {
+    if (!rank) return '#F59E0B';
     if (rank <= 50) return '#CCFF00';
     if (rank <= 200) return '#5D5FEF';
     if (rank <= 500) return '#22C55E';
@@ -80,7 +82,7 @@ export default function EuropeMap({ onSelectUni, filters }) {
                 <g style={{ animation: 'fadeIn .2s ease-out' }}>
                   <rect x={x - 60} y={y - 42} width={120} height={34} rx={6} fill="#161618" stroke="rgba(255,255,255,0.1)" />
                   <text x={x} y={y - 28} textAnchor="middle" fontSize={9} fontWeight={600} fill="#FFFFFF" style={{ fontFamily: "'Space Grotesk'" }}>{u.emoji} {u.nameEn}</text>
-                  <text x={x} y={y - 16} textAnchor="middle" fontSize={8} fill="#A1A1AA" style={{ fontFamily: "'Space Grotesk'" }}>#{u.rank} · ⭐{u.rating} · {u.city}</text>
+                  <text x={x} y={y - 16} textAnchor="middle" fontSize={8} fill="#A1A1AA" style={{ fontFamily: "'Space Grotesk'" }}>{u.rank ? `#${u.rank}` : u.rankNote} · ⭐{u.rating} · {u.city}</text>
                 </g>
               )}
             </g>
