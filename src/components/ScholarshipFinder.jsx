@@ -6,16 +6,26 @@ export default function ScholarshipFinder() {
   const [search, setSearch] = useState('');
   const [level, setLevel] = useState('');
   const [country, setCountry] = useState('');
+  const [onlyEligible, setOnlyEligible] = useState(true);
 
   const filtered = useMemo(() => {
     let list = [...scholarships];
     if (search) { const s = search.toLowerCase(); list = list.filter(sc => sc.name.toLowerCase().includes(s) || sc.desc.toLowerCase().includes(s) || sc.country.toLowerCase().includes(s)); }
     if (level) list = list.filter(sc => sc.level.includes(level));
     if (country) list = list.filter(sc => sc.country === country);
+    if (onlyEligible) list = list.filter(sc => sc.eu !== 'no');
     return list;
-  }, [search, level, country]);
+  }, [search, level, country, onlyEligible]);
 
   const countries = [...new Set(scholarships.map(s => s.country))].sort();
+  const excluded = filtered.filter(sc => sc.eu === 'no').length;
+
+  // Значка за допустимост от гледна точка на български (EU) гражданин.
+  const badge = {
+    yes:   { text: '✅ Важи за теб',    bg: 'rgba(34,197,94,0.12)',  cl: '#22C55E' },
+    no:    { text: '⛔ Не важи за EU',  bg: 'rgba(239,68,68,0.12)',  cl: '#EF4444' },
+    check: { text: '❓ Провери',        bg: 'rgba(245,158,11,0.12)', cl: '#F59E0B' },
+  };
 
   return (
     <div className="page-enter">
@@ -42,7 +52,17 @@ export default function ScholarshipFinder() {
           <option value="">Всички държави</option>
           {countries.map(c => <option key={c}>{c}</option>)}
         </select>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#A1A1AA', cursor: 'pointer', padding: '0 4px' }}>
+          <input type="checkbox" checked={onlyEligible} onChange={e => setOnlyEligible(e.target.checked)} style={{ accentColor: '#CCFF00' }} />
+          Само за които отговарям
+        </label>
       </div>
+
+      {!onlyEligible && excluded > 0 && (
+        <div style={{ fontSize: 11, color: '#F59E0B', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, padding: '8px 12px', marginBottom: 12 }}>
+          ⚠️ {excluded} от показаните са само за граждани извън EU — българските граждани не отговарят на условията.
+        </div>
+      )}
 
       {/* Scholarship Cards */}
       <div style={{ display: 'grid', gap: 10 }}>
@@ -54,6 +74,7 @@ export default function ScholarshipFinder() {
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#FFFFFF' }}>{sc.name}</div>
                   <div style={{ fontSize: 11, color: '#71717A' }}>{sc.country}</div>
+                  {sc.eu && <span title={sc.euNote} style={{ display: 'inline-block', marginTop: 4, padding: '2px 8px', borderRadius: 100, fontSize: 10, fontWeight: 600, background: badge[sc.eu].bg, color: badge[sc.eu].cl }}>{badge[sc.eu].text}</span>}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -62,6 +83,7 @@ export default function ScholarshipFinder() {
               </div>
             </div>
             <p style={{ fontSize: 12, color: '#71717A', lineHeight: 1.5, marginBottom: 8 }}>{sc.desc}</p>
+            {sc.euNote && sc.eu !== 'yes' && <p style={{ fontSize: 11, color: badge[sc.eu].cl, lineHeight: 1.5, marginBottom: 8 }}>{sc.euNote}</p>}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                 {sc.level.map(l => <span key={l} style={{ padding: '2px 8px', borderRadius: 100, fontSize: 10, background: 'rgba(204,255,0,0.1)', color: '#CCFF00', fontWeight: 500 }}>{l}</span>)}
@@ -76,7 +98,11 @@ export default function ScholarshipFinder() {
       {filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '40px 0', color: '#71717A' }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>🔍</div>
-          <p>Няма стипендии по тези критерии.</p>
+          <p style={{ marginBottom: 6 }}>Няма стипендии по тези критерии.</p>
+          <p style={{ fontSize: 12, maxWidth: 420, margin: '0 auto', lineHeight: 1.6 }}>
+            В част от държавите няма национална стипендия за EU граждани — там предимството е самото обучение,
+            което е безплатно или почти безплатно на местния език. Виж гайда за държавата.
+          </p>
         </div>
       )}
     </div>

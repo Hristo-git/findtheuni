@@ -7,7 +7,7 @@ AI-powered platform helping Bulgarian students find the right European universit
 - 🧠 **RIASEC Career Test** — 18-question Holland Code assessment with radar chart
 - 🤖 **AI Chatbot** — Ask questions about universities, scholarships, programs in Bulgarian
 - 🗺️ **Interactive Europe Map** — Visual university browser by location
-- 🎯 **Scholarship Finder** — 15 scholarships with filters (Erasmus+, DAAD, Chevening...)
+- 🎯 **Scholarship Finder** — 21 scholarships, each flagged for whether a Bulgarian (EU) citizen is eligible
 - 🎓 **108 Universities** from 25 European countries with detailed info (QS 2026 ranks, per-region tuition, teaching languages)
 - 📊 **Side-by-side Comparison** — Compare up to 4 universities on 13 criteria
 - ❤️ **Wishlist** — Save favorites and track your choices

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { universities, allFields, allCountries, fieldEmoji } from './data/universities';
-import { questions, RIASEC_MAP, dimEmoji, getArchetype, careerOutcomes } from './data/testData';
+import { questions, RIASEC_MAP, dimEmoji, getArchetype, careerOutcomes, scholarships } from './data/testData';
 import { Btn, Card, RadarChart, AnimBar, MatchRing } from './components/UI';
 import { tuitionFor, tuitionEstimate, feeModel } from './lib/fees';
 import ItalyAid from './components/ItalyAid';
@@ -209,7 +209,7 @@ export default function App() {
               <Btn accent onClick={() => setChat(true)}>🤖 AI Съветник</Btn>
             </div>
             <div style={{ display: "flex", justifyContent: "center", gap: 40, marginTop: 48, flexWrap: "wrap" }}>
-              {[[`${universities.length}`, "Университета"], [`${allCountries.length}`, "Държави"], ["15", "Стипендии"], ["AI", "Matching"]].map(([n, l]) =>
+              {[[`${universities.length}`, "Университета"], [`${allCountries.length}`, "Държави"], [`${scholarships.length}`, "Стипендии"], ["AI", "Matching"]].map(([n, l]) =>
                 <div key={l} style={{ textAlign: "center" }}>
                   <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 32, fontWeight: 700, color: "#CCFF00" }}>{n}</div>
                   <div style={{ fontSize: 12, color: "#71717A", marginTop: 2 }}>{l}</div>
