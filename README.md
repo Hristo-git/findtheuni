@@ -15,6 +15,8 @@ AI-powered platform helping Bulgarian students find the right European universit
 - 🧾 **Personalised tuition** — the published range resolved to what a Bulgarian (EU) student actually pays,
   from citizenship, language of instruction and public/private (`src/lib/fees.js`)
 - 🧮 **Italy aid estimator** — household income → estimated ISEE → tuition band + DSU scholarship (`src/lib/isee.js`)
+- 📝 **How to apply** — portal, diploma recognition, language level and entrance exams per university,
+  composed from country rules + field rules + own-procedure overrides (`src/data/admissions.js`)
 - 👔 **Employability** — Graduate employment rates
 - 📋 **Personal Dashboard** — RIASEC profile, recommendations, analytics
 

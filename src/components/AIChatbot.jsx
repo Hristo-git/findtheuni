@@ -3,6 +3,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import { chatPatterns } from '../data/chatData';
 import { universities, fieldEmoji } from '../data/universities';
 import { tuitionFor, tuitionEstimate } from '../lib/fees';
+import { admissionsFor } from '../lib/admissions';
+import { countryAdmissions } from '../data/admissions';
 
 // Browser-direct Claude call (key embedded at build time via VITE_ANTHROPIC_API_KEY)
 const BROWSER_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
@@ -20,6 +22,9 @@ ${universities.map(u => `${u.emoji} ${u.nameEn} | ${u.country}, ${u.city} | ${u.
 • ТАКСИ — диапазонът в базата значи различно нещо: за UK долната граница е за местни студенти, българинът плаща ГОРНАТА (след Brexit е международен). За Скандинавия, Нидерландия, Германия, Франция, Испания, Португалия долната граница Е тарифата за EU граждани. За Полша, Чехия, Словакия, Словения, Унгария, Румъния, Хърватия, Гърция, Сърбия и България долната е на местен език (често безплатно), горната е на английски. За Италия зависи от дохода на семейството (ISEE) — при нисък доход е €0. Частните са диапазон по програма. НИКОГА не казвай на български ученик, че ще плати британската домашна такса.
 • Виза: EU граждани → без виза в EU. UK → Student visa £363+£1334/год. Швейцария → разрешение СЛЕД пристигане.
 • Работа: Германия/UK/Австрия 20ч/сед; Скандинавия/Чехия/Полша без ограничение за EU; Швейцария 15ч/сед след 6 мес.
+КАНДИДАТСТВАНЕ ПО ДЪРЖАВИ (портал | диплома | изпити):
+${Object.entries(countryAdmissions).map(([c, a]) => `${c}: ${a.portal} | ${a.diploma} | ${(a.tests||[]).join('; ') || '—'}`).join('\n')}
+
 • Сертификати: IELTS 6.5+/TOEFL 90+ за англ.; Goethe B2/TestDaF за нем.; DELF B2 за фр.
 • Нострификация: ДЗИ е призната автоматично в EU по Болонски процес.
 • Срокове: UK-UCAS 15 яну; Германия 1–15 юли; Нидерландия 1 май; Швеция 15 яну; Норвегия 15 апр; ETH/EPFL 30 апр; Финландия 20 яну; Ирландия 1 фев
@@ -29,7 +34,7 @@ function buildContextStr({ currentPage, selectedUni, activeFilters, testResults,
   const pageNames = { home: 'начална страница', test: 'RIASEC тест', browse: 'преглед на университети', guides: 'гайдове по държави', scholarships: 'стипендии', tracker: 'Application Tracker', compare: 'сравнение', dash: 'лично табло' };
   const parts = [];
   if (currentPage) parts.push(`Страница: ${pageNames[currentPage] || currentPage}`);
-  if (selectedUni) parts.push(`Разглежда университет: ${selectedUni.name} (${selectedUni.nameEn}), ${selectedUni.city}, ${selectedUni.country}, #${selectedUni.rank}, такса за този потребител: ${tuitionFor(selectedUni, profile).label}/год. (обявен диапазон €${selectedUni.tuition[0]}–${selectedUni.tuition[1]}), живот €${selectedUni.costOfLiving}/мес`);
+  if (selectedUni) parts.push(`Разглежда университет: ${selectedUni.name} (${selectedUni.nameEn}), ${selectedUni.city}, ${selectedUni.country}, #${selectedUni.rank}, такса за този потребител: ${tuitionFor(selectedUni, profile).label}/год. (обявен диапазон €${selectedUni.tuition[0]}–${selectedUni.tuition[1]}), живот €${selectedUni.costOfLiving}/мес. Кандидатстване: ${(() => { const a = admissionsFor(selectedUni); return a ? `${a.portal}; ${a.english}; изпити: ${[...a.tests, ...a.fieldNotes.map(f => f.field + ' — ' + f.text)].join('; ') || 'няма'}${a.uniNote ? '; собствена процедура: ' + a.uniNote : ''}` : 'няма данни'; })()}`);
   if (activeFilters?.c || activeFilters?.f || activeFilters?.free) {
     const f = [];
     if (activeFilters.c) f.push(`държава: ${activeFilters.c}`);

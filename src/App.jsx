@@ -5,6 +5,7 @@ import { Btn, Card, RadarChart, AnimBar, MatchRing } from './components/UI';
 import { tuitionFor, tuitionEstimate, feeModel } from './lib/fees';
 import ItalyAid from './components/ItalyAid';
 import { matchesQuery, relevanceScore, searchHighlights, explainQuery } from './lib/search';
+import { admissionsFor } from './lib/admissions';
 import AIChatbot from './components/AIChatbot';
 import EuropeMap from './components/EuropeMap';
 import ScholarshipFinder from './components/ScholarshipFinder';
@@ -335,7 +336,7 @@ export default function App() {
               </Card>
             ); })()}
             <div style={{ display: "flex", gap: 4, marginBottom: 18 }}>
-              {[["info", "📋 Инфо"], ["prg", "🎓 Програми"], ["cost", "💰 Разходи"]].map(([k, l]) =>
+              {[["info", "📋 Инфо"], ["prg", "🎓 Програми"], ["apply", "📝 Кандидатстване"], ["cost", "💰 Разходи"]].map(([k, l]) =>
                 <button key={k} onClick={() => sTab(k)} style={{ padding: "8px 16px", borderRadius: 100, fontSize: 13, fontWeight: tab === k ? 600 : 500, color: tab === k ? "#CCFF00" : "#71717A", background: tab === k ? "rgba(204,255,0,0.1)" : "transparent", border: "none", fontFamily: "inherit" }}>{l}</button>
               )}
             </div>
@@ -368,6 +369,59 @@ export default function App() {
                 {sl.programs.map((p, i) => <span key={i} style={{ padding: "7px 16px", borderRadius: 100, fontSize: 13, background: "rgba(93,95,239,0.1)", color: "#818CF8" }}>{p}</span>)}
               </div>
             </div>}
+            {tab === "apply" && (() => {
+              const ad = admissionsFor(sl);
+              if (!ad) return <Card><div style={{ fontSize: 13, color: "#71717A" }}>Няма данни за кандидатстване в тази държава.</div></Card>;
+              const rows = [
+                ["🌐", "Къде се подава", ad.portal],
+                ["📜", "Диплома", ad.diploma],
+                ["🗣️", "Език", ad.language],
+                ["🇬🇧", "Типично ниво английски", ad.english],
+              ];
+              return <div>
+                {ad.uniNote && <Card style={{ marginBottom: 12, padding: "14px 16px", background: "rgba(204,255,0,0.06)", border: "1px solid rgba(204,255,0,0.2)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#CCFF00", marginBottom: 4 }}>
+                    ⚑ {ad.ownProcedure ? "Собствена процедура" : "Специфично за този университет"}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#A1A1AA", lineHeight: 1.6 }}>{ad.uniNote}</div>
+                </Card>}
+
+                <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+                  {rows.map(([ic, title, text], i) => <Card key={i} style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <span style={{ fontSize: 16, flexShrink: 0 }}>{ic}</span>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "#FFFFFF", marginBottom: 2 }}>{title}</div>
+                        <div style={{ fontSize: 11.5, color: "#A1A1AA", lineHeight: 1.6 }}>{text}</div>
+                      </div>
+                    </div>
+                  </Card>)}
+                </div>
+
+                {ad.tests.length > 0 && <Card style={{ marginBottom: 12, padding: "14px 16px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>🧪 Изпити в {ad.country}</div>
+                  {ad.tests.map((t, i) => <div key={i} style={{ fontSize: 11.5, color: "#A1A1AA", padding: "3px 0", lineHeight: 1.5 }}>• {t}</div>)}
+                  {ad.note && <div style={{ fontSize: 11, color: "#71717A", marginTop: 8, fontStyle: "italic" }}>{ad.note}</div>}
+                </Card>}
+
+                {ad.fieldNotes.length > 0 && <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+                  {ad.fieldNotes.map((f, i) => <Card key={i} style={{ padding: "12px 16px", background: "rgba(93,95,239,0.06)", border: "1px solid rgba(93,95,239,0.15)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#818CF8", marginBottom: 3 }}>{fieldEmoji[f.field] || "📌"} {f.field}</div>
+                    <div style={{ fontSize: 11.5, color: "#A1A1AA", lineHeight: 1.6 }}>{f.text}</div>
+                  </Card>)}
+                </div>}
+
+                {ad.deadline && <Card style={{ background: "rgba(245,158,11,0.1)", border: "none", padding: "14px 16px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#F59E0B", marginBottom: 4 }}>📅 Срокове</div>
+                  <div style={{ fontSize: 11.5, color: "#F59E0B", lineHeight: 1.6 }}>{ad.deadline}</div>
+                </Card>}
+
+                <div style={{ fontSize: 10, color: "#71717A", lineHeight: 1.5, marginTop: 12, padding: "10px 12px", background: "rgba(255,255,255,0.03)", borderRadius: 10 }}>
+                  Изискванията са на ниво държава и област. Точният праг за конкретна програма се задава от факултета
+                  и може да е по-висок — провери в сайта на университета, преди да разчиташ на тези числа.
+                </div>
+              </div>;
+            })()}
             {tab === "cost" && <Card>
               {(() => { const fee = tuitionEstimate(sl, profile), perMonth = Math.round(fee / 12), rows = [["🏠 Наем:", `€${Math.round(sl.costOfLiving * 0.55)}/мес`], ["🍕 Храна:", `€${Math.round(sl.costOfLiving * 0.25)}/мес`], ["🚌 Транспорт:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["📱 Други:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["🎓 Такса:", perMonth === 0 ? "€0/мес" : `≈ €${perMonth}/мес`], ["📊 Общо:", `≈ €${sl.costOfLiving + perMonth}/мес`]]; return rows.map(([l, v], i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", fontSize: 14 }}>
                 <span style={{ color: "#71717A" }}>{l}</span><span style={{ fontWeight: i === rows.length - 1 ? 700 : 500, color: i === rows.length - 1 ? "#CCFF00" : "#fff" }}>{v}</span>
