@@ -87,6 +87,7 @@ export const careerOutcomes = {
   "Австрия":     { salary1y: 34000, salary3y: 44000, salary5y: 52000, topIndustries: ["Туризъм","Инженерство","IT"], unemployment: 4.9 },
   "Полша":       { salary1y: 16000, salary3y: 22000, salary5y: 30000, topIndustries: ["IT","BPO","Automotive"], unemployment: 2.8 },
   "Чехия":       { salary1y: 18000, salary3y: 24000, salary5y: 32000, topIndustries: ["IT","Automotive","Pharma"], unemployment: 2.5 },
+  "Словакия":    { salary1y: 16000, salary3y: 22000, salary5y: 28000, topIndustries: ["Automotive","IT","Shared services"], unemployment: 5.2 },
   "Ирландия":    { salary1y: 36000, salary3y: 48000, salary5y: 60000, topIndustries: ["Tech","Pharma","Финанси"], unemployment: 4.2 },
   "Румъния":     { salary1y: 14000, salary3y: 20000, salary5y: 26000, topIndustries: ["IT","Automotive","BPO"], unemployment: 5.5 },
   "Гърция":      { salary1y: 16000, salary3y: 22000, salary5y: 28000, topIndustries: ["Туризъм","Shipping","IT"], unemployment: 10.8 },
