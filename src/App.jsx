@@ -363,7 +363,7 @@ export default function App() {
               </div>
             </div>
             <p style={{ color: "#71717A", fontSize: 14, marginBottom: 16 }}>{ls.length} резултата</p>
-            {mapMode && <div style={{ marginBottom: 18 }}><EuropeMap onSelectUni={u => { sL(u); sTab("info"); setMap(false); }} filters={{ c: ft.c, field: ft.f }} /></div>}
+            {mapMode && <div style={{ marginBottom: 18 }}><EuropeMap onSelectUni={u => { sL(u); sTab("info"); setMap(false); }} filters={{ country: ft.c, field: ft.f }} /></div>}
             <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200, position: "relative" }}>
                 <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 15 }}>🔍</span>
