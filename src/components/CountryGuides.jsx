@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { countryGuides, destQuestions } from '../data/countryData.js';
 import { universities } from '../data/universities.js';
 import { Btn, Card } from './UI.jsx';
+import { tuitionFor } from '../lib/fees';
+import { useUser } from '../UserContext';
 
 // ─── DESTINATION QUIZ ─────────────────────────
 function DestQuiz({ onFinish }) {
@@ -116,6 +118,7 @@ function QuizResults({ results, onViewGuide, onRetake }) {
 
 // ─── SINGLE COUNTRY GUIDE ─────────────────────
 function CountryDetail({ guide, onBack, onBrowse }) {
+  const { profile } = useUser();
   const countryUnis = universities.filter(u => u.country === (guide.country || guide.name)).sort((a, b) => (a.rank || 99999) - (b.rank || 99999));
 
   const sections = [
@@ -198,7 +201,7 @@ function CountryDetail({ guide, onBack, onBrowse }) {
             <span style={{ fontSize: 18 }}>{u.emoji}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#FFFFFF' }}>{u.nameEn}</div>
-              <div style={{ fontSize: 10, color: '#71717A' }}>📍{u.city} · 🏆{u.rank ? `#${u.rank}` : u.rankNote} · ⭐{u.rating} · 💰€{u.tuition[0]}–{u.tuition[1]}</div>
+              <div style={{ fontSize: 10, color: '#71717A' }}>📍{u.city} · 🏆{u.rank ? `#${u.rank}` : u.rankNote} · ⭐{u.rating} · 💰{tuitionFor(u, profile).label}</div>
             </div>
           </Card>
         ))}

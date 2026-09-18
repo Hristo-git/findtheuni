@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { universities, allFields, allCountries, fieldEmoji } from './data/universities';
 import { questions, RIASEC_MAP, dimEmoji, getArchetype, careerOutcomes } from './data/testData';
 import { Btn, Card, RadarChart, AnimBar, MatchRing } from './components/UI';
+import { tuitionFor, tuitionEstimate } from './lib/fees';
 import AIChatbot from './components/AIChatbot';
 import EuropeMap from './components/EuropeMap';
 import ScholarshipFinder from './components/ScholarshipFinder';
@@ -28,14 +29,14 @@ function calcMatch(u, profile) {
   } else score += 15;
   max += 30;
   if (profile.budget > 0) {
-    const monthlyTotal = u.costOfLiving + (u.tuition[0] / 12);
+    const monthlyTotal = u.costOfLiving + (tuitionEstimate(u, profile) / 12);
     score += monthlyTotal <= profile.budget ? 25 : monthlyTotal <= profile.budget * 1.3 ? 15 : 5;
   } else score += 12;
   max += 25;
   if (profile.langPref === 'en') score += u.international > 15 ? 20 : 10;
   else if (profile.langPref === 'de') score += ['Германия','Австрия','Швейцария'].includes(u.country) ? 20 : 5;
   else if (profile.langPref === 'fr') score += ['Франция','Швейцария','Белгия'].includes(u.country) ? 20 : 5;
-  else if (profile.langPref === 'local') score += u.tuition[0] === 0 ? 20 : 10;
+  else if (profile.langPref === 'local') score += tuitionFor(u, profile).exact === 0 ? 20 : 10;
   else score += 10;
   max += 20;
   score += rankKey(u) <= 100 ? 15 : rankKey(u) <= 300 ? 12 : rankKey(u) <= 600 ? 8 : 4;
@@ -76,11 +77,11 @@ export default function App() {
     if (ft.c) l = l.filter(u => u.country === ft.c);
     if (ft.f) l = l.filter(u => u.fields.includes(ft.f));
     if (ft.type) l = l.filter(u => u.type === ft.type);
-    if (ft.free) l = l.filter(u => u.tuition[0] === 0);
+    if (ft.free) l = l.filter(u => tuitionFor(u, profile).exact === 0);
     if (ft.s === "match" && profile.onboarded) l.sort((a, b) => (calcMatch(b, profile) || 0) - (calcMatch(a, profile) || 0));
     else if (ft.s === "ranking") l.sort((a, b) => rankKey(a) - rankKey(b));
     else if (ft.s === "rating") l.sort((a, b) => b.rating - a.rating);
-    else if (ft.s === "tuition") l.sort((a, b) => a.tuition[0] - b.tuition[0]);
+    else if (ft.s === "tuition") l.sort((a, b) => tuitionEstimate(a, profile) - tuitionEstimate(b, profile));
     else if (ft.s === "emp") l.sort((a, b) => b.employability - a.employability);
     else if (ft.s === "col") l.sort((a, b) => a.costOfLiving - b.costOfLiving);
     return l;
@@ -132,7 +133,7 @@ export default function App() {
         <div style={{ fontSize: 14, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#fff" }}>{u.name}</div>
         <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#71717A", flexWrap: "wrap", marginTop: 2 }}>
           <span>📍{u.city}, {u.country}</span><span title={u.rankNote || "QS 2027"}>🏆{u.rank ? `#${u.rank}` : u.rankNote || "—"}</span>
-          <span style={{ color: u.tuition[0] === 0 ? "#22C55E" : "#A1A1AA" }}>{u.tuition[0] === 0 && u.tuition[1] === 0 ? "🎉 Безпл." : `💶 €${u.tuition[0]}–${u.tuition[1]}`}</span>
+          {(() => { const t = tuitionFor(u, profile); return <span title={t.why} style={{ color: t.exact === 0 ? "#22C55E" : "#A1A1AA" }}>{t.exact === 0 ? "🎉 Безплатно" : `💶 ${t.label}`}{t.exact === null && " ?"}</span>; })()}
         </div>
         {matchedProgs.length > 0 && <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>
           {matchedProgs.slice(0, 3).map((p, i) => <span key={i} style={{ padding: "2px 8px", borderRadius: 100, fontSize: 10, background: "rgba(34,197,94,0.12)", color: "#22C55E" }}>🎓 {p}</span>)}
@@ -334,11 +335,24 @@ export default function App() {
             </div>
             {tab === "info" && <div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 10, marginBottom: 16 }}>
-                {[{ v: rankLabel(sl), l: sl.rankNote || "Ранг · QS 2027", cl: "#CCFF00" }, { v: `⭐${sl.rating}`, l: "Рейтинг", cl: "#F59E0B" }, { v: sl.tuition[0] === 0 && sl.tuition[1] === 0 ? "Безпл." : `€${sl.tuition[0]}–${sl.tuition[1]}`, l: "Такса", cl: "#22C55E" }, { v: sl.students.toLocaleString(), l: "Студенти", cl: "#5D5FEF" }, { v: `${sl.acceptance}%`, l: "Приемане", cl: "#EF4444" }, { v: `${sl.employability}%`, l: "Заетост", cl: "#14B8A6" }].map((s, i) => <Card key={i} style={{ textAlign: "center", padding: 12 }}>
+                {[{ v: rankLabel(sl), l: sl.rankNote || "Ранг · QS 2027", cl: "#CCFF00" }, { v: `⭐${sl.rating}`, l: "Рейтинг", cl: "#F59E0B" }, { v: tuitionFor(sl, profile).label, l: tuitionFor(sl, profile).exact === null ? "Такса (диапазон)" : "Твоята такса/год", cl: "#22C55E" }, { v: sl.students.toLocaleString(), l: "Студенти", cl: "#5D5FEF" }, { v: `${sl.acceptance}%`, l: "Приемане", cl: "#EF4444" }, { v: `${sl.employability}%`, l: "Заетост", cl: "#14B8A6" }].map((s, i) => <Card key={i} style={{ textAlign: "center", padding: 12 }}>
                   <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: 18, fontWeight: 700, color: s.cl }}>{s.v}</div>
                   <div style={{ fontSize: 10, color: "#71717A", marginTop: 2 }}>{s.l}</div>
                 </Card>)}
               </div>
+              {(() => { const t = tuitionFor(sl, profile); return (
+                <Card style={{ marginBottom: 14, padding: "12px 16px", background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.15)" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>💶</span>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#22C55E", marginBottom: 2 }}>
+                        {t.exact === null ? `Такса: ${t.label}/год` : `За теб: ${t.label}/год`} · обявен диапазон €{sl.tuition[0]}–{sl.tuition[1]}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#71717A", lineHeight: 1.5 }}>{t.why}</div>
+                    </div>
+                  </div>
+                </Card>
+              ); })()}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{sl.fields.map((f, i) => <span key={i} style={{ padding: "4px 12px", borderRadius: 100, fontSize: 12, background: "rgba(255,255,255,0.06)", color: "#A1A1AA" }}>{f}</span>)}</div>
             </div>}
             {tab === "prg" && <div>
@@ -348,9 +362,9 @@ export default function App() {
               </div>
             </div>}
             {tab === "cost" && <Card>
-              {[["🏠 Наем:", `€${Math.round(sl.costOfLiving * 0.55)}/мес`], ["🍕 Храна:", `€${Math.round(sl.costOfLiving * 0.25)}/мес`], ["🚌 Транспорт:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["📱 Други:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["📊 Общо:", `≈ €${sl.costOfLiving}/мес`]].map(([l, v], i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.06)" : "none", fontSize: 14 }}>
-                <span style={{ color: "#71717A" }}>{l}</span><span style={{ fontWeight: i === 4 ? 700 : 500, color: i === 4 ? "#CCFF00" : "#fff" }}>{v}</span>
-              </div>)}
+              {(() => { const fee = tuitionEstimate(sl, profile), perMonth = Math.round(fee / 12), rows = [["🏠 Наем:", `€${Math.round(sl.costOfLiving * 0.55)}/мес`], ["🍕 Храна:", `€${Math.round(sl.costOfLiving * 0.25)}/мес`], ["🚌 Транспорт:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["📱 Други:", `€${Math.round(sl.costOfLiving * 0.1)}/мес`], ["🎓 Такса:", perMonth === 0 ? "€0/мес" : `≈ €${perMonth}/мес`], ["📊 Общо:", `≈ €${sl.costOfLiving + perMonth}/мес`]]; return rows.map(([l, v], i) => <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: i < rows.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none", fontSize: 14 }}>
+                <span style={{ color: "#71717A" }}>{l}</span><span style={{ fontWeight: i === rows.length - 1 ? 700 : 500, color: i === rows.length - 1 ? "#CCFF00" : "#fff" }}>{v}</span>
+              </div>); })()}
             </Card>}
             <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
               <Btn primary onClick={() => { user.addApplication({ uniId: sl.id, uni: sl.nameEn, country: sl.country, program: sl.programs[0] || 'General', emoji: sl.emoji }); nv("tracker"); }}>📤 Кандидатствай</Btn>
@@ -410,7 +424,7 @@ export default function App() {
                     <div style={{ fontSize: 22 }}>{u.emoji}</div><div style={{ fontWeight: 600, fontSize: 12, color: "#fff", marginTop: 4 }}>{u.nameEn}</div>
                     <div onClick={() => user.toggleCompare(id)} style={{ fontSize: 10, color: "#71717A", cursor: "pointer", marginTop: 4 }}>✕ Премахни</div>
                   </th> : null })}</tr></thead>
-                <tbody>{[["Място", u => `${u.city}, ${u.country}`], ["Ранг", u => rankLabel(u)], ["Рейтинг", u => `⭐${u.rating}`], ["Такса", u => u.tuition[0] === 0 && u.tuition[1] === 0 ? "Безпл.!" : `€${u.tuition[0]}–${u.tuition[1]}`], ["Студенти", u => u.students.toLocaleString()], ["Осн.", u => u.founded], ["Приемане", u => `${u.acceptance}%`], ["Заетост", u => `${u.employability}%`], ["€/мес", u => `€${u.costOfLiving}`], ["Тип", u => u.type === "public" ? "Държавен" : "Частен"], ["Стипендии", u => u.scholarships ? "✅" : "❌"], ["Езици", u => u.languages.join(", ")], ["Програми", u => u.programs.slice(0, 4).join(", ")]].map(([l, fn], i) => <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <tbody>{[["Място", u => `${u.city}, ${u.country}`], ["Ранг", u => rankLabel(u)], ["Рейтинг", u => `⭐${u.rating}`], ["Такса за теб", u => tuitionFor(u, profile).label], ["Студенти", u => u.students.toLocaleString()], ["Осн.", u => u.founded], ["Приемане", u => `${u.acceptance}%`], ["Заетост", u => `${u.employability}%`], ["€/мес", u => `€${u.costOfLiving}`], ["Тип", u => u.type === "public" ? "Държавен" : "Частен"], ["Стипендии", u => u.scholarships ? "✅" : "❌"], ["Езици", u => u.languages.join(", ")], ["Програми", u => u.programs.slice(0, 4).join(", ")]].map(([l, fn], i) => <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 600, color: "#71717A", fontSize: 11, background: "rgba(255,255,255,0.02)" }}>{l}</td>
                   {cm.map(id => { const u = universities.find(x => x.id === id); return u ? <td key={id} style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, color: "#A1A1AA" }}>{fn(u)}</td> : null })}
                 </tr>)}</tbody></table>
@@ -491,6 +505,7 @@ export default function App() {
         selectedUni={sl}
         activeFilters={ft}
         testResults={dn ? { code: getR().code, fields: getR().fields } : null}
+        profile={profile}
       />
 
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "24px", textAlign: "center", color: "#71717A", fontSize: 11 }}>

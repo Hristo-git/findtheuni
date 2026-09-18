@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Anthropic from '@anthropic-ai/sdk';
 import { chatPatterns } from '../data/chatData';
 import { universities, fieldEmoji } from '../data/universities';
+import { tuitionFor, tuitionEstimate } from '../lib/fees';
 
 // Browser-direct Claude call (key embedded at build time via VITE_ANTHROPIC_API_KEY)
 const BROWSER_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
@@ -16,6 +17,7 @@ ${universities.map(u => `${u.emoji} ${u.nameEn} | ${u.country}, ${u.city} | ${u.
 
 КЛЮЧОВИ ФАКТИ:
 • Безплатно: Германия (€0+€300/сем), Норвегия (напълно), Финландия (EU), Чехия/Полша (местен език), Гърция/Австрия (EU €0–1500)
+• ТАКСИ — диапазонът в базата значи различно нещо: за UK долната граница е за местни студенти, българинът плаща ГОРНАТА (след Brexit е международен). За Скандинавия, Нидерландия, Германия, Франция, Испания, Португалия долната граница Е тарифата за EU граждани. За Полша, Чехия, Словакия, Словения, Унгария, Румъния, Хърватия, Гърция, Сърбия и България долната е на местен език (често безплатно), горната е на английски. За Италия зависи от дохода на семейството (ISEE) — при нисък доход е €0. Частните са диапазон по програма. НИКОГА не казвай на български ученик, че ще плати британската домашна такса.
 • Виза: EU граждани → без виза в EU. UK → Student visa £363+£1334/год. Швейцария → разрешение СЛЕД пристигане.
 • Работа: Германия/UK/Австрия 20ч/сед; Скандинавия/Чехия/Полша без ограничение за EU; Швейцария 15ч/сед след 6 мес.
 • Сертификати: IELTS 6.5+/TOEFL 90+ за англ.; Goethe B2/TestDaF за нем.; DELF B2 за фр.
@@ -23,11 +25,11 @@ ${universities.map(u => `${u.emoji} ${u.nameEn} | ${u.country}, ${u.city} | ${u.
 • Срокове: UK-UCAS 15 яну; Германия 1–15 юли; Нидерландия 1 май; Швеция 15 яну; Норвегия 15 апр; ETH/EPFL 30 апр; Финландия 20 яну; Ирландия 1 фев
 • Стипендии: Erasmus+ €800–1200/мес; DAAD €934/мес; Chevening (UK пълна); SI Scholarship (SE); Eiffel €1181/мес (FR)`;
 
-function buildContextStr({ currentPage, selectedUni, activeFilters, testResults } = {}) {
+function buildContextStr({ currentPage, selectedUni, activeFilters, testResults, profile = {} } = {}) {
   const pageNames = { home: 'начална страница', test: 'RIASEC тест', browse: 'преглед на университети', guides: 'гайдове по държави', scholarships: 'стипендии', tracker: 'Application Tracker', compare: 'сравнение', dash: 'лично табло' };
   const parts = [];
   if (currentPage) parts.push(`Страница: ${pageNames[currentPage] || currentPage}`);
-  if (selectedUni) parts.push(`Разглежда университет: ${selectedUni.name} (${selectedUni.nameEn}), ${selectedUni.city}, ${selectedUni.country}, #${selectedUni.rank}, €${selectedUni.tuition[0]}–${selectedUni.tuition[1]}/год., живот €${selectedUni.costOfLiving}/мес`);
+  if (selectedUni) parts.push(`Разглежда университет: ${selectedUni.name} (${selectedUni.nameEn}), ${selectedUni.city}, ${selectedUni.country}, #${selectedUni.rank}, такса за този потребител: ${tuitionFor(selectedUni, profile).label}/год. (обявен диапазон €${selectedUni.tuition[0]}–${selectedUni.tuition[1]}), живот €${selectedUni.costOfLiving}/мес`);
   if (activeFilters?.c || activeFilters?.f || activeFilters?.free) {
     const f = [];
     if (activeFilters.c) f.push(`държава: ${activeFilters.c}`);
@@ -72,10 +74,10 @@ async function getAIReply(userMsg, history, ctx = {}) {
   } catch { clearTimeout(timeout); }
 
   // 3. Local pattern matching fallback
-  return getReply(userMsg, history);
+  return getReply(userMsg, history, ctx.profile);
 }
 
-const tuitionStr = u => u.tuition[0] === 0 && u.tuition[1] === 0 ? '🎉 Безплатно' : `€${u.tuition[0]}–${u.tuition[1]}/год`;
+const tuitionStr = (u, profile = {}) => { const t = tuitionFor(u, profile); return t.exact === 0 ? '🎉 Безплатно' : `${t.label}/год`; };
 
 // Short entrance requirement per country (used in context-based exam replies)
 const countryExamShort = {
@@ -243,7 +245,7 @@ function fuzzyFieldMatch(text) {
   return bestField;
 }
 
-function getReply(msg, history = []) {
+function getReply(msg, history = [], profile = {}) {
   const lower = msg.toLowerCase();
   const lastAiMsg = [...history].reverse().find(m => m.from === 'ai')?.text || '';
 
@@ -274,7 +276,7 @@ function getReply(msg, history = []) {
   // Context-based replies (only when previous answer had real data)
   if (isCostQ && contextUnis.length > 0) {
     const list = contextUnis.map(u =>
-      `${u.emoji} **${u.nameEn}** (${u.city}) — 🏙️ €${u.costOfLiving}/мес · 💰 ${tuitionStr(u)}`
+      `${u.emoji} **${u.nameEn}** (${u.city}) — 🏙️ €${u.costOfLiving}/мес · 💰 ${tuitionStr(u, profile)}`
     ).join('\n');
     return `Разходи за живот (споменати университети):\n\n${list}\n\n💡 Включва наем, храна и транспорт.`;
   }
@@ -289,7 +291,7 @@ function getReply(msg, history = []) {
 
   if (isPriceQ && contextUnis.length > 0) {
     const list = contextUnis.map(u =>
-      `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u)} · 🏙️ €${u.costOfLiving}/мес`
+      `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u, profile)} · 🏙️ €${u.costOfLiving}/мес`
     ).join('\n');
     return `Цени за споменатите университети:\n\n${list}\n\n💡 Таксите са за EU граждани. За non-EU може да са 2–3x по-високи.`;
   }
@@ -297,7 +299,7 @@ function getReply(msg, history = []) {
   if (isPriceQ && contextField) {
     const unis = universities.filter(u => u.fields.includes(contextField)).sort((a, b) => a.rank - b.rank);
     const list = unis.slice(0, 10).map(u =>
-      `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u)} · 🏙️ €${u.costOfLiving}/мес`
+      `${u.emoji} **${u.nameEn}** (${u.country}) — ${tuitionStr(u, profile)} · 🏙️ €${u.costOfLiving}/мес`
     ).join('\n');
     return `Цени за **${contextField}** университети:\n\n${list}\n\n💡 Таксите са за EU граждани.`;
   }
@@ -305,7 +307,7 @@ function getReply(msg, history = []) {
   if (isShowMore && contextField) {
     const unis = universities.filter(u => u.fields.includes(contextField)).sort((a, b) => a.rank - b.rank);
     const list = unis.map(u =>
-      `${u.emoji} **${u.nameEn}** (${u.city}, ${u.country}) — #${u.rank} | ${tuitionStr(u)}`
+      `${u.emoji} **${u.nameEn}** (${u.city}, ${u.country}) — #${u.rank} | ${tuitionStr(u, profile)}`
     ).join('\n');
     return `Всички университети за **${contextField}** (${unis.length}):\n\n${list}`;
   }
@@ -403,10 +405,10 @@ function getReply(msg, history = []) {
     const matches = universities.filter(u => lower.includes(u.nameEn.toLowerCase()) || lower.includes(u.name.toLowerCase()));
     if (matches.length >= 2) {
       const [a, b] = matches;
-      const total = u => Math.round(u.tuition[1] / 12) + u.costOfLiving;
+      const total = u => Math.round(tuitionEstimate(u, profile) / 12) + u.costOfLiving;
       return `📊 **${a.nameEn}** vs **${b.nameEn}**\n\n` +
         `🏆 Ранг:       #${a.rank} vs #${b.rank}\n` +
-        `💰 Такса:      ${tuitionStr(a)} vs ${tuitionStr(b)}\n` +
+        `💰 Такса:      ${tuitionStr(a, profile)} vs ${tuitionStr(b, profile)}\n` +
         `🏙️ Живот:      €${a.costOfLiving}/мес vs €${b.costOfLiving}/мес\n` +
         `💳 Общо/мес:   ~€${total(a)} vs ~€${total(b)}\n` +
         `⭐ Рейтинг:    ${a.rating}/5 vs ${b.rating}/5\n` +
@@ -422,16 +424,16 @@ function getReply(msg, history = []) {
   if (budget) {
     const base = contextField ? universities.filter(u => u.fields.includes(contextField)) : universities;
     const filtered = base.filter(u => {
-      const monthlyFee = u.tuition[1] === 0 ? 0 : Math.round(u.tuition[1] / 12);
+      const monthlyFee = Math.round(tuitionEstimate(u, profile) / 12);
       return (monthlyFee + u.costOfLiving) <= budget;
     }).sort((a, b) => {
-      const aT = (a.tuition[1] === 0 ? 0 : Math.round(a.tuition[1] / 12)) + a.costOfLiving;
-      const bT = (b.tuition[1] === 0 ? 0 : Math.round(b.tuition[1] / 12)) + b.costOfLiving;
+      const aT = Math.round(tuitionEstimate(a, profile) / 12) + a.costOfLiving;
+      const bT = Math.round(tuitionEstimate(b, profile) / 12) + b.costOfLiving;
       return aT - bT;
     });
     if (filtered.length > 0) {
       const list = filtered.slice(0, 10).map(u => {
-        const fee = u.tuition[1] === 0 ? 0 : Math.round(u.tuition[1] / 12);
+        const fee = Math.round(tuitionEstimate(u, profile) / 12);
         const total = fee + u.costOfLiving;
         const fieldNote = contextField ? '' : ` · ${u.fields.slice(0, 2).join(', ')}`;
         return `${u.emoji} **${u.nameEn}** (${u.country}) — ~€${total}/мес${fieldNote}`;
@@ -452,7 +454,7 @@ function getReply(msg, history = []) {
     lower.includes(u.name.toLowerCase()) || lower.includes(u.nameEn.toLowerCase())
   );
   if (uni) {
-    return `**${uni.name}** (${uni.nameEn})\n📍 ${uni.city}, ${uni.country} · 🏆 #${uni.rank}\n⭐ ${uni.rating}/5 · 💰 ${tuitionStr(uni)}\n🏙️ Живот: ~€${uni.costOfLiving}/мес · 👔 ${uni.employability}% заетост\n👥 ${uni.students.toLocaleString()} студенти · 📅 от ${uni.founded}\n📚 ${uni.programs.join(', ')}\n🌐 ${uni.languages.join(', ')} · ${uni.type === 'public' ? '🏛️ Държавен' : '🏢 Частен'}`;
+    return `**${uni.name}** (${uni.nameEn})\n📍 ${uni.city}, ${uni.country} · 🏆 #${uni.rank}\n⭐ ${uni.rating}/5 · 💰 ${tuitionStr(uni, profile)}\n🏙️ Живот: ~€${uni.costOfLiving}/мес · 👔 ${uni.employability}% заетост\n👥 ${uni.students.toLocaleString()} студенти · 📅 от ${uni.founded}\n📚 ${uni.programs.join(', ')}\n🌐 ${uni.languages.join(', ')} · ${uni.type === 'public' ? '🏛️ Държавен' : '🏢 Частен'}`;
   }
 
   // Country
@@ -460,14 +462,14 @@ function getReply(msg, history = []) {
   if (countryMatch.length > 0) {
     const country = countryMatch[0].country;
     const unis = universities.filter(u => u.country === country).sort((a, b) => a.rank - b.rank);
-    return `Университети в **${country}** (${unis.length}):\n${unis.slice(0, 6).map(u => `${u.emoji} **${u.nameEn}** — #${u.rank} | ${tuitionStr(u)}`).join('\n')}${unis.length > 6 ? `\n...и още ${unis.length - 6}. Виж всички в браузъра!` : ''}`;
+    return `Университети в **${country}** (${unis.length}):\n${unis.slice(0, 6).map(u => `${u.emoji} **${u.nameEn}** — #${u.rank} | ${tuitionStr(u, profile)}`).join('\n')}${unis.length > 6 ? `\n...и още ${unis.length - 6}. Виж всички в браузъра!` : ''}`;
   }
 
   // Field — with fuzzy matching to handle typos (e.g. "архотектура" → "Архитектура")
   const fieldMatch = fuzzyFieldMatch(lower);
   if (fieldMatch) {
     const unis = universities.filter(u => u.fields.includes(fieldMatch)).sort((a, b) => a.rank - b.rank);
-    return `Топ университети за **${fieldMatch}** (${unis.length} общо):\n${unis.slice(0, 6).map(u => `${u.emoji} **${u.nameEn}** (${u.city}) — #${u.rank} | ${tuitionStr(u)}`).join('\n')}\n\nПитай "цените в тези университети" за пълния списък с такси.`;
+    return `Топ университети за **${fieldMatch}** (${unis.length} общо):\n${unis.slice(0, 6).map(u => `${u.emoji} **${u.nameEn}** (${u.city}) — #${u.rank} | ${tuitionStr(u, profile)}`).join('\n')}\n\nПитай "цените в тези университети" за пълния списък с такси.`;
   }
 
   return "Мога да помогна с:\n🎓 Университет — напр. \"Oxford\", \"ETH Zurich\"\n🌍 Държава — напр. \"Германия\", \"Нидерландия\"\n📚 Специалност — напр. \"IT\", \"Медицина\", \"Архитектура\"\n💰 \"Цените в тези университети\" след предишен отговор\n🎯 Стипендии, разходи, RIASEC тест";
@@ -480,7 +482,7 @@ function formatMsg(text) {
   });
 }
 
-export default function AIChatbot({ isOpen, onClose, currentPage, selectedUni, activeFilters, testResults }) {
+export default function AIChatbot({ isOpen, onClose, currentPage, selectedUni, activeFilters, testResults, profile = {} }) {
   const [msgs, setMsgs] = useState([
     { from: 'ai', text: "Здравей! 👋 Аз съм AI съветникът на Read More. Питай ме за университети, стипендии, програми или страни. Как мога да помогна?" }
   ]);
@@ -489,7 +491,7 @@ export default function AIChatbot({ isOpen, onClose, currentPage, selectedUni, a
   const [selChips, setSelChips] = useState([]);
   const endRef = useRef(null);
   const inputRef = useRef(null);
-  const ctx = { currentPage, selectedUni, activeFilters, testResults };
+  const ctx = { currentPage, selectedUni, activeFilters, testResults, profile };
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
   useEffect(() => { if (isOpen) inputRef.current?.focus(); }, [isOpen]);
@@ -507,7 +509,7 @@ export default function AIChatbot({ isOpen, onClose, currentPage, selectedUni, a
       setTyping(true);
       getAIReply(userMsg, next, ctx)
         .then(reply => setMsgs(p => [...p, { from: 'ai', text: reply }]))
-        .catch(() => setMsgs(p => [...p, { from: 'ai', text: getReply(userMsg, next) }]))
+        .catch(() => setMsgs(p => [...p, { from: 'ai', text: getReply(userMsg, next, profile) }]))
         .finally(() => setTyping(false));
       return next;
     });
