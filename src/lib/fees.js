@@ -10,6 +10,8 @@
 //   private  частен университет — диапазонът е по програма, не по студент
 //   flat     една и съща такса за всички
 
+import { italyAid } from './isee.js';
+
 const LOCAL_LANGUAGE_FREE = new Set([
   'България', 'Полша', 'Чехия', 'Словакия', 'Словения',
   'Унгария', 'Румъния', 'Хърватия', 'Гърция', 'Сърбия',
@@ -70,11 +72,28 @@ export function tuitionFor(u, profile = {}) {
       };
     }
 
-    case 'income':
+    case 'income': {
+      const aid = italyAid(u, profile.household || {});
+      if (!aid) {
+        return {
+          exact: null, label: span(min, max), model,
+          why: 'Зависи от дохода на семейството (ISEE). При нисък доход таксата е €0 — плаща се само ~€140 регионален налог. Въведи доход по-долу, за да видиш твоята лента.',
+        };
+      }
+      const dsu = aid.dsuEligible
+        ? ` При този ISEE отговаряш и на условията за стипендия DSU (~€${aid.dsuAmount}/год), която включва пълно освобождаване от такса.`
+        : '';
+      if (aid.tuition.exact === 0) {
+        return {
+          exact: 0, label: 'Безплатно', model,
+          why: `При оценен ISEE ≈ €${aid.isee} попадаш в no tax area — таксата е €0, плаща се само ~€${aid.regionalTax} регионален налог.${dsu}`,
+        };
+      }
       return {
-        exact: null, label: span(min, max), model,
-        why: 'Зависи от дохода на семейството (ISEE). При нисък доход таксата е €0 — плаща се само ~€140 регионален налог.',
+        exact: aid.tuition.upTo, label: `до ${eur(aid.tuition.upTo)}`, model,
+        why: `При оценен ISEE ≈ €${aid.isee} таксата е най-много ${eur(aid.tuition.upTo)} плюс ~€${aid.regionalTax} регионален налог.${dsu}`,
       };
+    }
 
     case 'private':
     default:

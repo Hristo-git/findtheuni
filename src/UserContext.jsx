@@ -21,6 +21,7 @@ const defaults = {
   compared: [],
   applications: [],
   docs: {},
+  household: null,    // { income, size, assets } — за оценка на ISEE (Италия)
   quizResults: null,  // destination quiz
   createdAt: null,
 };

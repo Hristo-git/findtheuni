@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { universities, allFields, allCountries, fieldEmoji } from './data/universities';
 import { questions, RIASEC_MAP, dimEmoji, getArchetype, careerOutcomes } from './data/testData';
 import { Btn, Card, RadarChart, AnimBar, MatchRing } from './components/UI';
-import { tuitionFor, tuitionEstimate } from './lib/fees';
+import { tuitionFor, tuitionEstimate, feeModel } from './lib/fees';
+import ItalyAid from './components/ItalyAid';
 import AIChatbot from './components/AIChatbot';
 import EuropeMap from './components/EuropeMap';
 import ScholarshipFinder from './components/ScholarshipFinder';
@@ -353,6 +354,7 @@ export default function App() {
                   </div>
                 </Card>
               ); })()}
+              {feeModel(sl) === "income" && <ItalyAid uni={sl} />}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{sl.fields.map((f, i) => <span key={i} style={{ padding: "4px 12px", borderRadius: 100, fontSize: 12, background: "rgba(255,255,255,0.06)", color: "#A1A1AA" }}>{f}</span>)}</div>
             </div>}
             {tab === "prg" && <div>
